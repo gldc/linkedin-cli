@@ -1,0 +1,106 @@
+{
+  "_synthetic": "Hand-written stand-in for `messengerMessagesBySyncToken`: one page of the thread named by context.json, holding a single message. One is deliberate - it is what makes the `count=1` page report more to fetch while a `count=20` page reports the thread exhausted.",
+  "data": {
+    "data": {
+      "messengerMessagesBySyncToken": {
+        "metadata": {
+          "deletedUrns": [],
+          "shouldClearCache": true,
+          "newSyncToken": "U1lOVEhFVElDU1lOQ1RPS0VO",
+          "$type": "com.linkedin.messenger.SyncMetadata"
+        },
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.MessengerMessagesQueryResult"
+    }
+  },
+  "included": [
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw1==)",
+      "body": {
+        "attributes": [],
+        "text": "Following up on the platform engineer role: is the team still hiring for a September start?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783579800000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/nadia-okonkwo-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Nadia",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Okonkwo",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/tomas-brandt-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Tomas",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Brandt",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    }
+  ]
+}

@@ -1,0 +1,481 @@
+{
+  "_synthetic": "Hand-written stand-in for one page of `voyagerIdentityDashNotificationCards`. Ten cards, because the live page is ten and the projection tests count them. Every person, company, group and urn is invented. The awkward parts of the real payload are reproduced on purpose and must survive any edit: `subHeadline` is null on every card, the second line lives in `contentPrimaryText` on social cards and in `actionCaption` on the upsell one, the card type is only readable out of the urn, and `cardAction.actionTarget` is relative on all but the jobs card.",
+  "data": {
+    "metadata": {
+      "numUnseen": 2,
+      "*notificationFilter": "urn:li:fsd_notificationFilter:ALL",
+      "nextStart": 11,
+      "latestPublishedAt": 1784990000000,
+      "$type": "com.linkedin.voyager.dash.identity.notifications.NotificationsMetadata"
+    },
+    "entityUrn": "urn:li:fsd_notificationCardsCollection:ALL",
+    "paging": {
+      "start": 0,
+      "count": 10,
+      "links": []
+    },
+    "*elements": [
+      "urn:li:fsd_notificationCard:(REACTIONS_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:activity:7100000000000000001,U1lOVEhFVElDQTAx))",
+      "urn:li:fsd_notificationCard:(REACTED_TO_YOUR_COMMENT,urn:li:comment:(activity:7100000000000000002,7100000000000000012))",
+      "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAx))",
+      "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAy))",
+      "urn:li:fsd_notificationCard:(WVMP_V2,urn:li:string:WVMP_V2)",
+      "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_GROUP,urn:li:uniqueSuffix:(urn:li:group:9100001,U1lOVEhFVElDQzAx))",
+      "urn:li:fsd_notificationCard:(PREMIUM_SERVICE_PROVIDER_NEW_LEADS,urn:li:uniqueSuffix:(urn:li:marketplacePlatformProvider:(urn:li:organization:9200001,SERVICE_MARKETPLACE),U1lOVEhFVElDRDAx))",
+      "urn:li:fsd_notificationCard:(FACET_SUGGESTIONS,urn:li:member:100000001)",
+      "urn:li:fsd_notificationCard:(BREAKING_NEWS,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDRTAx))",
+      "urn:li:fsd_notificationCard:(SHARE_HIRING_INTENT,urn:li:uniqueSuffix:(urn:li:member:100000004,U1lOVEhFVElDRjAx))"
+    ],
+    "$type": "com.linkedin.restli.common.CollectionResponse"
+  },
+  "included": [
+    {
+      "entityUrn": "urn:li:fsd_notificationFilter:ALL",
+      "name": "All",
+      "$type": "com.linkedin.voyager.dash.identity.notifications.NotificationFilter"
+    },
+    {
+      "entityUrn": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000PRIYA",
+      "firstName": "Priya",
+      "lastName": "Raghunathan",
+      "publicIdentifier": "priya-raghunathan-synthetic",
+      "$type": "com.linkedin.voyager.dash.identity.profile.Profile"
+    },
+    {
+      "entityUrn": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000ELENA",
+      "firstName": "Elena",
+      "lastName": "Marchetti",
+      "publicIdentifier": "elena-marchetti-synthetic",
+      "$type": "com.linkedin.voyager.dash.identity.profile.Profile"
+    },
+    {
+      "entityUrn": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000TOMAS",
+      "firstName": "Tomas",
+      "lastName": "Brandt",
+      "publicIdentifier": "tomas-brandt-synthetic",
+      "$type": "com.linkedin.voyager.dash.identity.profile.Profile"
+    },
+    {
+      "entityUrn": "urn:li:fsd_group:9100001",
+      "name": "Platform Engineering Practitioners",
+      "$type": "com.linkedin.voyager.dash.groups.Group"
+    },
+    {
+      "entityUrn": "urn:li:fsd_company:9200001",
+      "name": "Northwind Analytics",
+      "$type": "com.linkedin.voyager.dash.organization.Company"
+    },
+    {
+      "entityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000001",
+      "numLikes": 34,
+      "numComments": 6,
+      "$type": "com.linkedin.voyager.dash.social.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000002",
+      "numLikes": 12,
+      "numComments": 3,
+      "$type": "com.linkedin.voyager.dash.social.SocialActivityCounts"
+    },
+
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(REACTIONS_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:activity:7100000000000000001,U1lOVEhFVElDQTAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,REACTIONS_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:activity:7100000000000000001,U1lOVEhFVElDQTAx))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*profilePicture": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000PRIYA"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Priya Raghunathan and Tomas Brandt reacted to a post: Notes on making automation auditable",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/feed/update/urn%3Ali%3Ashare%3A7100000000000000001",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784990000000,
+      "read": false,
+      "insightType": "SOCIAL_ACTIVITY_COUNTS",
+      "socialActivityCountsUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000001",
+      "*socialActivityCounts": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000001",
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDE=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(REACTED_TO_YOUR_COMMENT,urn:li:comment:(activity:7100000000000000002,7100000000000000012))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,REACTED_TO_YOUR_COMMENT,urn:li:comment:(activity:7100000000000000002,7100000000000000012))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*profilePicture": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000ELENA"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Elena Marchetti and 1 other reacted to your comment.",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": [
+        {
+          "textDirection": "USER_LOCALE",
+          "text": "Agreed, and the audit trail is the product rather than a side effect of it.",
+          "attributesV2": [],
+          "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+        }
+      ],
+      "contentSecondaryText": [
+        {
+          "textDirection": "USER_LOCALE",
+          "text": "Every automation pitch skips the part where somebody has to explain, afterwards, exactly what it did.",
+          "attributesV2": [],
+          "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+        }
+      ],
+      "actionCaption": null,
+      "contentType": "SUPPORTING_IMAGE",
+      "cardAction": {
+        "actionTarget": "/feed/?highlightedUpdateUrn=urn%3Ali%3Aactivity%3A7100000000000000002&highlightedUpdateType=REACTED_TO_YOUR_COMMENT",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784989000000,
+      "read": false,
+      "insightType": "SOCIAL_ACTIVITY_COUNTS",
+      "socialActivityCountsUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000002",
+      "*socialActivityCounts": "urn:li:fsd_socialActivityCounts:urn:li:activity:7100000000000000002",
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDI=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAx))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*profilePicture": "urn:li:fsd_profile:SYNTHETIC000000000000000000000000TOMAS"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Tomas Brandt reposted Ines Ferreira's post: We are hiring a platform engineer in Lisbon",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/feed/update/urn%3Ali%3Aactivity%3A7100000000000000003?origin=SHARED_BY_YOUR_NETWORK",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784975000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDM=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAy))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,SHARED_BY_YOUR_NETWORK,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDQjAy))",
+      "headerImage": null,
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Marco Halvorsen posted: Three years of shipping releases on a Friday, and what finally changed",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/feed/update/urn%3Ali%3Aactivity%3A7100000000000000004?origin=SHARED_BY_YOUR_NETWORK",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784974000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDQ=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(WVMP_V2,urn:li:string:WVMP_V2)",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,WVMP_V2,urn:li:string:WVMP_V2)",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailDataUnion": {"icon": "IMG_PROFILE_CARDS_PREMIUM_56DP"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "4 people viewed your profile. See the full list with Premium.",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": {
+        "textDirection": "USER_LOCALE",
+        "text": "1-month free trial. We will send a reminder 7 days before it ends.",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "cardAction": {
+        "actionTarget": "/analytics/profile-views",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784973000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [
+        {
+          "displayText": {
+            "textDirection": "USER_LOCALE",
+            "text": "Try Premium",
+            "attributesV2": [],
+            "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+          },
+          "actionTarget": "/premium/products",
+          "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+        }
+      ],
+      "trackingId": "U1lOVEhFVElDTkExMDU=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(SHARED_BY_YOUR_GROUP,urn:li:uniqueSuffix:(urn:li:group:9100001,U1lOVEhFVElDQzAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,SHARED_BY_YOUR_GROUP,urn:li:uniqueSuffix:(urn:li:group:9100001,U1lOVEhFVElDQzAx))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*groupLogo": "urn:li:fsd_group:9100001"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "New post in Platform Engineering Practitioners by Rachael Adeyemi",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/groups/9100001/?q=highlightedFeedForGroups&highlightedUpdateUrn=urn%3Ali%3AgroupPost%3A9100001-7100000000000000005",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784934000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDY=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(PREMIUM_SERVICE_PROVIDER_NEW_LEADS,urn:li:uniqueSuffix:(urn:li:marketplacePlatformProvider:(urn:li:organization:9200001,SERVICE_MARKETPLACE),U1lOVEhFVElDRDAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,PREMIUM_SERVICE_PROVIDER_NEW_LEADS,urn:li:uniqueSuffix:(urn:li:marketplacePlatformProvider:(urn:li:organization:9200001,SERVICE_MARKETPLACE),U1lOVEhFVElDRDAx))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*companyLogo": "urn:li:fsd_company:9200001"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "An IT consulting request from Dana Kowalski and other clients is available",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/service-marketplace/provider/requests/?serviceVanityName=synthetic-service-0001",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784921000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDc=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(FACET_SUGGESTIONS,urn:li:member:100000001)",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,FACET_SUGGESTIONS,urn:li:member:100000001)",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailData": {"*companyLogo": "urn:li:fsd_company:9200001"},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Staff Platform Engineer at Northwind Analytics and 2 other jobs match your preferences",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "https://www.linkedin.com/jobs/search-results/?keywords=platform+engineering&distance=25",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784920000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [
+        {
+          "displayText": {
+            "textDirection": "USER_LOCALE",
+            "text": "View jobs",
+            "attributesV2": [],
+            "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+          },
+          "actionTarget": "https://www.linkedin.com/jobs/search-results/?keywords=platform+engineering&distance=25",
+          "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+        }
+      ],
+      "trackingId": "U1lOVEhFVElDTkExMDg=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(BREAKING_NEWS,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDRTAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,BREAKING_NEWS,urn:li:uniqueSuffix:(urn:li:none,U1lOVEhFVElDRTAx))",
+      "headerImage": {
+        "attributes": [
+          {
+            "detailDataUnion": {"imageUrl": {"url": "https://media.example.invalid/synthetic/news-0001"}},
+            "$type": "com.linkedin.voyager.dash.common.image.ImageAttribute"
+          }
+        ],
+        "$type": "com.linkedin.voyager.dash.common.image.ImageViewModel"
+      },
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "An open-source model release is reshaping tooling budgets. See the latest.",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/feed/news/9300001",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784916000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [],
+      "trackingId": "U1lOVEhFVElDTkExMDk=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    },
+    {
+      "entityUrn": "urn:li:fsd_notificationCard:(SHARE_HIRING_INTENT,urn:li:uniqueSuffix:(urn:li:member:100000004,U1lOVEhFVElDRjAx))",
+      "objectUrn": "urn:li:notificationV2:(urn:li:member:100000001,SHARE_HIRING_INTENT,urn:li:uniqueSuffix:(urn:li:member:100000004,U1lOVEhFVElDRjAx))",
+      "headerImage": null,
+      "headline": {
+        "textDirection": "USER_LOCALE",
+        "text": "Help Ines Ferreira hire for Platform Engineer at Northwind Analytics",
+        "attributesV2": [],
+        "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+      },
+      "subHeadline": null,
+      "contentPrimaryText": null,
+      "contentSecondaryText": null,
+      "actionCaption": null,
+      "cardAction": {
+        "actionTarget": "/jobs/view/9400000001",
+        "type": "DISPLAY",
+        "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+      },
+      "publishedAt": 1784915000000,
+      "read": true,
+      "insightType": null,
+      "socialActivityCountsUrn": null,
+      "actions": [
+        {
+          "displayText": {
+            "textDirection": "USER_LOCALE",
+            "text": "Share job",
+            "attributesV2": [],
+            "$type": "com.linkedin.voyager.dash.common.text.TextViewModel"
+          },
+          "actionTarget": "/jobs/view/9400000001",
+          "$type": "com.linkedin.voyager.dash.identity.notifications.CardAction"
+        }
+      ],
+      "trackingId": "U1lOVEhFVElDTkExMTA=",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.notifications.FullCard"],
+      "$type": "com.linkedin.voyager.dash.identity.notifications.Card"
+    }
+  ]
+}

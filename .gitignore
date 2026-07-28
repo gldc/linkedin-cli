@@ -1,0 +1,18 @@
+# never commit live-account captures or sessions
+scratchpad/
+*.session.json
+session.json
+# Only the raw captures. Their synthetic siblings one directory up are tracked
+# on purpose - they are what lets a fresh clone run the suite at all.
+tests/fixtures/raw/
+li_cookies.json
+
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.DS_Store

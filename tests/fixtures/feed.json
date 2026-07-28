@@ -1,0 +1,1115 @@
+{
+  "_synthetic": "Hand-written stand-in for one page of `feed/updatesV2?q=chronFeed`. Ten feed items and eleven UpdateV2 entities: the extra one is the post the reshare at index 2 wraps, which hangs off `*resharedUpdate` and is not itself a feed item. Every person, company, urn and post body is invented. Two properties of the real capture are load-bearing and must survive any edit: the page mixes member actors with page actors, so both the `fsd_profile` and the `fsd_company` branch of author resolution are exercised, and the actor's usable urn is only reachable through the `*miniProfile`/`*miniCompany` reference on a name or image attribute - `actor.urn` itself is the unusable member/company form.",
+  "data": {
+    "metadata": {
+      "paginationToken": "synthetic-pagination-token",
+      "$type": "com.linkedin.voyager.feed.FeedMetadata"
+    },
+    "entityUrn": "urn:li:fs_feedUpdates:chronFeed",
+    "paging": {
+      "count": 10,
+      "start": 0,
+      "total": 528,
+      "links": []
+    },
+    "*elements": [
+      "urn:li:fs_updateV2:(urn:li:activity:7486790696960000001,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486788180377600002,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486785663795200003,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486783147212800004,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486780630630400005,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486778114048000006,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486775597465600007,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486773080883200008,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486770564300800009,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "urn:li:fs_updateV2:(urn:li:activity:7486768047718400010,MAIN_FEED,DEBUG_REASON,DEFAULT,false)"
+    ],
+    "$type": "com.linkedin.restli.common.CollectionResponse"
+  },
+  "included": [
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000PRIYA",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "objectUrn": null,
+      "firstName": "Priya",
+      "lastName": "Raghunathan",
+      "occupation": "Staff platform engineer at Harbourline Systems",
+      "publicIdentifier": "priya-raghunathan-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000TOMAS",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "objectUrn": null,
+      "firstName": "Tomas",
+      "lastName": "Brandt",
+      "occupation": "Release engineering, mostly on the boring parts",
+      "publicIdentifier": "tomas-brandt-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000ELENA",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "objectUrn": null,
+      "firstName": "Elena",
+      "lastName": "Marchetti",
+      "occupation": "Developer experience lead",
+      "publicIdentifier": "elena-marchetti-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000MARCO",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "objectUrn": null,
+      "firstName": "Marco",
+      "lastName": "Halvorsen",
+      "occupation": "SRE, on call so you do not have to be",
+      "publicIdentifier": "marco-halvorsen-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000INESF",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "objectUrn": null,
+      "firstName": "Ines",
+      "lastName": "Ferreira",
+      "occupation": "Engineering manager at Northwind Analytics",
+      "publicIdentifier": "ines-ferreira-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000RACHA",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "objectUrn": null,
+      "firstName": "Rachael",
+      "lastName": "Adeyemi",
+      "occupation": "Build systems and supply-chain security",
+      "publicIdentifier": "rachael-adeyemi-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000DANAK",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000DANAK",
+      "objectUrn": null,
+      "firstName": "Dana",
+      "lastName": "Kowalski",
+      "occupation": "Independent consultant, internal tooling",
+      "publicIdentifier": "dana-kowalski-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000YUSUF",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "objectUrn": null,
+      "firstName": "Yusuf",
+      "lastName": "Demir",
+      "occupation": "Writes about incident review",
+      "publicIdentifier": "yusuf-demir-synthetic",
+      "memorialized": false,
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniCompany:9200001",
+      "dashCompanyUrn": "urn:li:fsd_company:9200001",
+      "objectUrn": "urn:li:company:9200001",
+      "name": "Northwind Analytics",
+      "universalName": "northwind-analytics",
+      "description": "Data platforms for people who dislike dashboards",
+      "$type": "com.linkedin.voyager.entities.shared.MiniCompany"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniCompany:9200002",
+      "dashCompanyUrn": "urn:li:fsd_company:9200002",
+      "objectUrn": "urn:li:company:9200002",
+      "name": "Harbourline Systems",
+      "universalName": "harbourline-systems",
+      "description": "Infrastructure software",
+      "$type": "com.linkedin.voyager.entities.shared.MiniCompany"
+    },
+    {
+      "entityUrn": "urn:li:fs_miniCompany:9200003",
+      "dashCompanyUrn": "urn:li:fsd_company:9200003",
+      "objectUrn": "urn:li:company:9200003",
+      "name": "Meridian Robotics",
+      "universalName": "meridian-robotics",
+      "description": "Warehouse automation",
+      "$type": "com.linkedin.voyager.entities.shared.MiniCompany"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486790696960000001,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486790696960000001,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486790696960000001",
+        "shareUrn": "urn:li:share:7486790696960000000",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000010",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Priya Raghunathan",
+          "accessibilityText": "Priya Raghunathan",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000PRIYA",
+              "start": 0,
+              "length": 17,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Staff platform engineer at Harbourline Systems",
+          "accessibilityText": "Staff platform engineer at Harbourline Systems",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000PRIYA",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Spent the week deleting code instead of writing it. Net effect on the release pipeline: eleven minutes faster and two fewer ways to page someone at 3am.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486790696960000001",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486790696960000001",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486790696960000001,urn:li:activity:7486790696960000001,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486790696960000001",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486790696960000001",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486790696960000001",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486790696960000001",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486790696960000001",
+      "urn": "urn:li:activity:7486790696960000001",
+      "numLikes": 4,
+      "numComments": 0,
+      "numShares": 0,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486788180377600002,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486788180377600002,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486788180377600002",
+        "shareUrn": "urn:li:share:7486788180377600001",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:company:9200001",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Northwind Analytics",
+          "accessibilityText": "Northwind Analytics",
+          "attributes": [
+            {
+              "*miniCompany": "urn:li:fs_miniCompany:9200001",
+              "start": 0,
+              "length": 19,
+              "type": "COMPANY_NAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Data platforms for people who dislike dashboards",
+          "accessibilityText": "Data platforms for people who dislike dashboards",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "COMPANY_LOGO",
+              "*miniCompany": "urn:li:fs_miniCompany:9200001",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "We are hiring a platform engineer in Lisbon. Remote within the EU is fine, and the interview is a real codebase rather than a whiteboard.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486788180377600002",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486788180377600002",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486788180377600002,urn:li:activity:7486788180377600002,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486788180377600002",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486788180377600002",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486788180377600002",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486788180377600002",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486788180377600002",
+      "urn": "urn:li:activity:7486788180377600002",
+      "numLikes": 11,
+      "numComments": 1,
+      "numShares": 1,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486785663795200003,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486785663795200003,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486785663795200003",
+        "shareUrn": "urn:li:share:7486785663795200002",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000011",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Tomas Brandt",
+          "accessibilityText": "Tomas Brandt",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000TOMAS",
+              "start": 0,
+              "length": 12,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Release engineering, mostly on the boring parts",
+          "accessibilityText": "Release engineering, mostly on the boring parts",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000TOMAS",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Reposting this because the point about blameless review being a process, not a tone of voice, is the part everyone skips.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486785663795200003",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2",
+      "*resharedUpdate": "urn:li:fs_updateV2:(urn:li:activity:7486765531136000011,MAIN_FEED,DEBUG_REASON,DEFAULT,false)"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486785663795200003",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486785663795200003,urn:li:activity:7486785663795200003,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486785663795200003",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486785663795200003",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486785663795200003",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486785663795200003",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486785663795200003",
+      "urn": "urn:li:activity:7486785663795200003",
+      "numLikes": 18,
+      "numComments": 2,
+      "numShares": 2,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486783147212800004,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486783147212800004,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486783147212800004",
+        "shareUrn": "urn:li:share:7486783147212800003",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000012",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Elena Marchetti",
+          "accessibilityText": "Elena Marchetti",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000ELENA",
+              "start": 0,
+              "length": 15,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Developer experience lead",
+          "accessibilityText": "Developer experience lead",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000ELENA",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Developer experience is not a survey score. It is whether the second-newest person on the team can ship on their first day without asking anyone.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486783147212800004",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486783147212800004",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486783147212800004,urn:li:activity:7486783147212800004,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486783147212800004",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486783147212800004",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486783147212800004",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486783147212800004",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486783147212800004",
+      "urn": "urn:li:activity:7486783147212800004",
+      "numLikes": 25,
+      "numComments": 3,
+      "numShares": 0,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486780630630400005,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486780630630400005,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486780630630400005",
+        "shareUrn": "urn:li:share:7486780630630400004",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:company:9200002",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Harbourline Systems",
+          "accessibilityText": "Harbourline Systems",
+          "attributes": [
+            {
+              "*miniCompany": "urn:li:fs_miniCompany:9200002",
+              "start": 0,
+              "length": 19,
+              "type": "COMPANY_NAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Infrastructure software",
+          "accessibilityText": "Infrastructure software",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "COMPANY_LOGO",
+              "*miniCompany": "urn:li:fs_miniCompany:9200002",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Our build cache is now content-addressed end to end. Write-up in the comments, including the two weeks we lost to a clock skew bug.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486780630630400005",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486780630630400005",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486780630630400005,urn:li:activity:7486780630630400005,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486780630630400005",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486780630630400005",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486780630630400005",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486780630630400005",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486780630630400005",
+      "urn": "urn:li:activity:7486780630630400005",
+      "numLikes": 32,
+      "numComments": 4,
+      "numShares": 1,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486778114048000006,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486778114048000006,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486778114048000006",
+        "shareUrn": "urn:li:share:7486778114048000005",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000013",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Marco Halvorsen",
+          "accessibilityText": "Marco Halvorsen",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000MARCO",
+              "start": 0,
+              "length": 15,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "SRE, on call so you do not have to be",
+          "accessibilityText": "SRE, on call so you do not have to be",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000MARCO",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Postmortem habit that actually stuck: write the timeline before you write the cause. The cause changes; the timeline does not.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486778114048000006",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486778114048000006",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486778114048000006,urn:li:activity:7486778114048000006,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486778114048000006",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486778114048000006",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486778114048000006",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486778114048000006",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486778114048000006",
+      "urn": "urn:li:activity:7486778114048000006",
+      "numLikes": 39,
+      "numComments": 0,
+      "numShares": 2,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486775597465600007,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486775597465600007,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486775597465600007",
+        "shareUrn": "urn:li:share:7486775597465600006",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000014",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Ines Ferreira",
+          "accessibilityText": "Ines Ferreira",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000INESF",
+              "start": 0,
+              "length": 13,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Engineering manager at Northwind Analytics",
+          "accessibilityText": "Engineering manager at Northwind Analytics",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000INESF",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Hiring note - if your take-home takes longer than the interview loop, it is not a take-home, it is unpaid work.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486775597465600007",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486775597465600007",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486775597465600007,urn:li:activity:7486775597465600007,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486775597465600007",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486775597465600007",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486775597465600007",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486775597465600007",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486775597465600007",
+      "urn": "urn:li:activity:7486775597465600007",
+      "numLikes": 46,
+      "numComments": 1,
+      "numShares": 0,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486773080883200008,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486773080883200008,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486773080883200008",
+        "shareUrn": "urn:li:share:7486773080883200007",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:company:9200003",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Meridian Robotics",
+          "accessibilityText": "Meridian Robotics",
+          "attributes": [
+            {
+              "*miniCompany": "urn:li:fs_miniCompany:9200003",
+              "start": 0,
+              "length": 17,
+              "type": "COMPANY_NAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Warehouse automation",
+          "accessibilityText": "Warehouse automation",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "COMPANY_LOGO",
+              "*miniCompany": "urn:li:fs_miniCompany:9200003",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Six months of running the fleet on the new scheduler. Utilisation up, and more importantly, the pager is quiet.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486773080883200008",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486773080883200008",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486773080883200008,urn:li:activity:7486773080883200008,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486773080883200008",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486773080883200008",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486773080883200008",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486773080883200008",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486773080883200008",
+      "urn": "urn:li:activity:7486773080883200008",
+      "numLikes": 53,
+      "numComments": 2,
+      "numShares": 1,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486770564300800009,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486770564300800009,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486770564300800009",
+        "shareUrn": "urn:li:share:7486770564300800008",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000015",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Rachael Adeyemi",
+          "accessibilityText": "Rachael Adeyemi",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000RACHA",
+              "start": 0,
+              "length": 15,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Build systems and supply-chain security",
+          "accessibilityText": "Build systems and supply-chain security",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000RACHA",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Signed builds are only useful if somebody verifies them. We added the verification step and immediately found three unsigned artefacts in production.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486770564300800009",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486770564300800009",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486770564300800009,urn:li:activity:7486770564300800009,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486770564300800009",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486770564300800009",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486770564300800009",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486770564300800009",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486770564300800009",
+      "urn": "urn:li:activity:7486770564300800009",
+      "numLikes": 60,
+      "numComments": 3,
+      "numShares": 2,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486768047718400010,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486768047718400010,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486768047718400010",
+        "shareUrn": "urn:li:share:7486768047718400009",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000016",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Dana Kowalski",
+          "accessibilityText": "Dana Kowalski",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000DANAK",
+              "start": 0,
+              "length": 13,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Independent consultant, internal tooling",
+          "accessibilityText": "Independent consultant, internal tooling",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000DANAK",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "The best internal tool I built this year is a 40-line script that answers 'who owns this alert'. No dashboard, no service, no on-call rotation of its own.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486768047718400010",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486768047718400010",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486768047718400010,urn:li:activity:7486768047718400010,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486768047718400010",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486768047718400010",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486768047718400010",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486768047718400010",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486768047718400010",
+      "urn": "urn:li:activity:7486768047718400010",
+      "numLikes": 67,
+      "numComments": 4,
+      "numShares": 0,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    },
+    {
+      "entityUrn": "urn:li:fs_updateV2:(urn:li:activity:7486765531136000011,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "dashEntityUrn": "urn:li:fsd_update:(urn:li:activity:7486765531136000011,MAIN_FEED,DEBUG_REASON,DEFAULT,false)",
+      "updateMetadata": {
+        "urn": "urn:li:activity:7486765531136000011",
+        "shareUrn": "urn:li:share:7486765531136000010",
+        "actionsPosition": "HEADER_COMPONENT",
+        "detailPageType": "FEED_DETAIL",
+        "$type": "com.linkedin.voyager.feed.render.UpdateV2MetaData"
+      },
+      "actor": {
+        "urn": "urn:li:member:100000017",
+        "name": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Yusuf Demir",
+          "accessibilityText": "Yusuf Demir",
+          "attributes": [
+            {
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000YUSUF",
+              "start": 0,
+              "length": 11,
+              "type": "PROFILE_FULLNAME",
+              "$type": "com.linkedin.voyager.common.TextAttribute"
+            }
+          ],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "description": {
+          "textDirection": "USER_LOCALE",
+          "text": "Writes about incident review",
+          "accessibilityText": "Writes about incident review",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "subDescription": {
+          "textDirection": "USER_LOCALE",
+          "text": "2h •",
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "image": {
+          "attributes": [
+            {
+              "sourceType": "PROFILE_PICTURE",
+              "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC00000000000000000000000YUSUF",
+              "$type": "com.linkedin.voyager.common.ImageAttribute"
+            }
+          ],
+          "accessibilityTextAttributes": [],
+          "$type": "com.linkedin.voyager.common.ImageViewModel"
+        },
+        "supplementaryActorInfo": null,
+        "$type": "com.linkedin.voyager.feed.render.ActorComponent"
+      },
+      "commentary": {
+        "numLines": 3,
+        "text": {
+          "textDirection": "FIRST_STRONG",
+          "text": "Incident review works when the room believes nobody is being graded. That belief is built by what happens in the four weeks after the review, not by the facilitator's opening line.",
+          "attributes": [],
+          "$type": "com.linkedin.voyager.common.TextViewModel"
+        },
+        "$type": "com.linkedin.voyager.feed.render.TextComponent"
+      },
+      "*socialDetail": "urn:li:fs_socialDetail:urn:li:activity:7486765531136000011",
+      "showSocialDetail": true,
+      "content": null,
+      "$type": "com.linkedin.voyager.feed.render.UpdateV2"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486765531136000011",
+      "dashEntityUrn": "urn:li:fsd_socialDetail:(urn:li:activity:7486765531136000011,urn:li:activity:7486765531136000011,urn:li:highlightedReply:-)",
+      "urn": "urn:li:activity:7486765531136000011",
+      "liked": false,
+      "*totalSocialActivityCounts": "urn:li:fs_socialActivityCounts:urn:li:activity:7486765531136000011",
+      "$type": "com.linkedin.voyager.feed.shared.SocialDetail"
+    },
+    {
+      "entityUrn": "urn:li:fs_socialActivityCounts:urn:li:activity:7486765531136000011",
+      "dashEntityUrn": "urn:li:fsd_socialActivityCounts:urn:li:activity:7486765531136000011",
+      "socialDetailEntityUrn": "urn:li:fs_socialDetail:urn:li:activity:7486765531136000011",
+      "urn": "urn:li:activity:7486765531136000011",
+      "numLikes": 311,
+      "numComments": 42,
+      "numShares": 18,
+      "numViews": null,
+      "liked": false,
+      "reactionText": null,
+      "$type": "com.linkedin.voyager.feed.shared.SocialActivityCounts"
+    }
+  ]
+}

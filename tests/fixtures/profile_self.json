@@ -1,0 +1,87 @@
+{
+  "_synthetic": "Hand-written stand-in for `GET identity/dash/profiles/<urn>?decorationId=…FullProfile-76`. Invented person, invented urns. The decoration's documented gap is reproduced deliberately: there is no Position and no Education entity anywhere in `included`, because the real one carries none either - see `surfaces/profile.py`.",
+  "data": {
+    "entityUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+    "objectUrn": "urn:li:member:100000001",
+    "publicIdentifier": "nadia-okonkwo-synthetic",
+    "firstName": "Nadia",
+    "lastName": "Okonkwo",
+    "maidenName": null,
+    "headline": "Platform engineering, automation and developer tooling.",
+    "summary": "I build the boring infrastructure other people's interesting work runs on: release pipelines, observability, and the small internal tools that stop a team repeating itself. Currently focused on making agent-driven automation auditable rather than merely impressive.",
+    "address": "Lisbon",
+    "locationName": "Lisbon, Portugal",
+    "geoLocation": {
+      "*geo": "urn:li:fsd_geo:900000001",
+      "geoUrn": "urn:li:fsd_geo:900000001",
+      "postalCode": "1100",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.ProfileGeoLocation"],
+      "$type": "com.linkedin.voyager.dash.identity.profile.ProfileGeoLocation"
+    },
+    "geoLocationBackfilled": false,
+    "*industry": "urn:li:fsd_industry:4",
+    "industryUrn": "urn:li:fsd_industry:4",
+    "industryV2Urn": "urn:li:fsd_industryV2:4",
+    "*profileTreasuryMediaProfile": ["urn:li:fsd_treasuryMedia:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,900001)"],
+    "profilePicture": {
+      "displayImageUrn": "urn:li:digitalmediaAsset:SYNTHETIC00000PORTRAIT00",
+      "$type": "com.linkedin.voyager.dash.identity.profile.ProfilePicture"
+    },
+    "backgroundPicture": null,
+    "birthDateOn": null,
+    "memorialized": false,
+    "premium": false,
+    "showPremiumSubscriberBadge": false,
+    "primaryLocale": {
+      "country": "PT",
+      "language": "en",
+      "$type": "com.linkedin.common.Locale"
+    },
+    "supportedLocales": [
+      {
+        "country": "PT",
+        "language": "en",
+        "$type": "com.linkedin.common.Locale"
+      }
+    ],
+    "state": "ACTIVE",
+    "tempStatus": null,
+    "tempStatusEmoji": null,
+    "trackingId": "U1lOVEhFVElDUFJPRjA=",
+    "versionTag": "1000000001",
+    "volunteerCauses": [],
+    "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.FullProfile"],
+    "$type": "com.linkedin.voyager.dash.identity.profile.Profile"
+  },
+  "included": [
+    {
+      "entityUrn": "urn:li:fsd_geo:900000002",
+      "defaultLocalizedName": "Portugal",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.CountryGeo"],
+      "$type": "com.linkedin.voyager.dash.common.Geo"
+    },
+    {
+      "entityUrn": "urn:li:fsd_geo:900000001",
+      "countryUrn": "urn:li:fsd_geo:900000002",
+      "*country": "urn:li:fsd_geo:900000002",
+      "defaultLocalizedName": "Lisbon, Lisbon Metropolitan Area, Portugal",
+      "defaultLocalizedNameWithoutCountryName": "Lisbon, Lisbon Metropolitan Area",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.Geo"],
+      "$type": "com.linkedin.voyager.dash.common.Geo"
+    },
+    {
+      "entityUrn": "urn:li:fsd_industry:4",
+      "name": "Software Development",
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.Industry"],
+      "$type": "com.linkedin.voyager.dash.common.Industry"
+    },
+    {
+      "entityUrn": "urn:li:fsd_treasuryMedia:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,900001)",
+      "title": "Notes on making automation auditable",
+      "description": null,
+      "customTitle": null,
+      "$recipeTypes": ["com.linkedin.voyager.dash.deco.identity.profile.TreasuryMedia"],
+      "$type": "com.linkedin.voyager.dash.identity.profile.TreasuryMedia"
+    }
+  ]
+}

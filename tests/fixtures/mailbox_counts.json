@@ -1,0 +1,43 @@
+{
+  "_synthetic": "Hand-written stand-in for `messengerMailboxCountsByMailbox`. Six categories, because the live mailbox reports six and a projection that silently dropped one would still look right against a shorter fixture.",
+  "data": {
+    "data": {
+      "messengerMailboxCountsByMailbox": {
+        "elements": [
+          {
+            "category": "SECONDARY_INBOX",
+            "unreadConversationCount": 12,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          },
+          {
+            "category": "MESSAGE_REQUEST_PENDING",
+            "unreadConversationCount": 0,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          },
+          {
+            "category": "ARCHIVE",
+            "unreadConversationCount": 5,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          },
+          {
+            "category": "INBOX",
+            "unreadConversationCount": 40,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          },
+          {
+            "category": "PRIMARY_INBOX",
+            "unreadConversationCount": 9,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          },
+          {
+            "category": "SPAM",
+            "unreadConversationCount": 3,
+            "$type": "com.linkedin.messenger.MailboxCount"
+          }
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.MessengerMailboxCountsQueryResult"
+    }
+  }
+}

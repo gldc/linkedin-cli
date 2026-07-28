@@ -1,0 +1,63 @@
+{
+  "_synthetic": "Hand-written stand-in for a `GET /voyager/api/me` response. Every name, id and urn below is invented; nothing here came off a real account. Shape - not content - is what the tests pin, so keep the key set and the fs_/fsd_ urn pair faithful to the live payload when editing.",
+  "data": {
+    "plainId": 100000001,
+    "publicContactInfo": {
+      "$type": "com.linkedin.voyager.identity.shared.PublicContactInfo"
+    },
+    "premiumSubscriber": false,
+    "*miniProfile": "urn:li:fs_miniProfile:SYNTHETIC0000000000000000000000000SELF",
+    "$type": "com.linkedin.voyager.common.Me"
+  },
+  "included": [
+    {
+      "customPronoun": null,
+      "memorialized": false,
+      "lastName": "Okonkwo",
+      "dashEntityUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "standardizedPronoun": null,
+      "occupation": "Platform engineering, automation and developer tooling.",
+      "objectUrn": "urn:li:member:100000001",
+      "backgroundImage": {
+        "digitalmediaAsset": "urn:li:digitalmediaAsset:SYNTHETIC00000BACKGROUND",
+        "artifacts": [
+          {
+            "width": 757,
+            "fileIdentifyingUrlPathSegment": "200_800/synthetic-background/0/1700000000000",
+            "expiresAt": 1800000000000,
+            "height": 189,
+            "$type": "com.linkedin.common.VectorArtifact"
+          }
+        ],
+        "rootUrl": "https://media.example.invalid/synthetic/background_",
+        "$type": "com.linkedin.common.VectorImage"
+      },
+      "picture": {
+        "digitalmediaAsset": "urn:li:digitalmediaAsset:SYNTHETIC00000PORTRAIT00",
+        "artifacts": [
+          {
+            "width": 100,
+            "fileIdentifyingUrlPathSegment": "scale_100_100/synthetic-portrait/0/1700000000000",
+            "expiresAt": 1800000000000,
+            "height": 100,
+            "$type": "com.linkedin.common.VectorArtifact"
+          },
+          {
+            "width": 400,
+            "fileIdentifyingUrlPathSegment": "scale_400_400/synthetic-portrait/0/1700000000000",
+            "expiresAt": 1800000000000,
+            "height": 400,
+            "$type": "com.linkedin.common.VectorArtifact"
+          }
+        ],
+        "rootUrl": "https://media.example.invalid/synthetic/portrait-",
+        "$type": "com.linkedin.common.VectorImage"
+      },
+      "$type": "com.linkedin.voyager.identity.shared.MiniProfile",
+      "firstName": "Nadia",
+      "entityUrn": "urn:li:fs_miniProfile:SYNTHETIC0000000000000000000000000SELF",
+      "publicIdentifier": "nadia-okonkwo-synthetic",
+      "trackingId": "U1lOVEhFVElDMDAwMQ=="
+    }
+  ]
+}

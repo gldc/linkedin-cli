@@ -1,0 +1,906 @@
+{
+  "_synthetic": "Hand-written stand-in for `messengerConversationsByCategoryQuery`. Ten conversations, one of them read and one of them a three-party group chat. Every person, urn and message body is invented; the operator is the same synthetic member as in me.json. The urn shape is the load-bearing part: a msg_conversation urn carries parentheses, commas and `==` padding, which is exactly what `restli.encode` exists to escape.",
+  "data": {
+    "data": {
+      "messengerConversationsByCategoryQuery": {
+        "metadata": {
+          "nextCursor": null,
+          "$type": "com.linkedin.messenger.ConversationsMetadata"
+        },
+        "*elements": [
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw0==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw1==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw2==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw3==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw4==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw5==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw6==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw7==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw8==)",
+          "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw9==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.MessengerConversationsQueryResult"
+    }
+  },
+  "included": [
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw0==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw0==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-0/",
+      "lastActivityAt": 1783583400000,
+      "createdAt": 1783497000000,
+      "lastReadAt": 1783583400000,
+      "read": true,
+      "unreadCount": 0,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw0==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw1==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw1==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-1/",
+      "lastActivityAt": 1783579800000,
+      "createdAt": 1783493400000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw2==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw2==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-2/",
+      "lastActivityAt": 1783576200000,
+      "createdAt": 1783489800000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw2==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw3==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw3==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-3/",
+      "lastActivityAt": 1783572600000,
+      "createdAt": 1783486200000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw3==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw4==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw4==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-4/",
+      "lastActivityAt": 1783569000000,
+      "createdAt": 1783482600000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw4==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw5==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw5==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-5/",
+      "lastActivityAt": 1783565400000,
+      "createdAt": 1783479000000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": true,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000DANAK"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw5==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw6==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw6==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-6/",
+      "lastActivityAt": 1783561800000,
+      "createdAt": 1783475400000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw6==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw7==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw7==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-7/",
+      "lastActivityAt": 1783558200000,
+      "createdAt": 1783471800000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw7==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw8==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw8==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-8/",
+      "lastActivityAt": 1783554600000,
+      "createdAt": 1783468200000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw8==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw9==)",
+      "backendUrn": "urn:li:messagingThread:2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw9==",
+      "conversationUrl": "https://www.linkedin.com/messaging/thread/2-synthetic-9/",
+      "lastActivityAt": 1783551000000,
+      "createdAt": 1783464600000,
+      "lastReadAt": null,
+      "read": false,
+      "unreadCount": 1,
+      "categories": [
+        "INBOX",
+        "PRIMARY_INBOX"
+      ],
+      "groupChat": false,
+      "title": null,
+      "state": "ACTIVE",
+      "notificationStatus": "ON",
+      "*creator": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE",
+      "*conversationParticipants": [
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+        "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE"
+      ],
+      "messages": {
+        "*elements": [
+          "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw9==)"
+        ],
+        "$type": "com.linkedin.restli.common.CollectionResponse"
+      },
+      "$type": "com.linkedin.messenger.Conversation"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/nadia-okonkwo-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Nadia",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Okonkwo",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/priya-raghunathan-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Priya",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Raghunathan",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/tomas-brandt-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Tomas",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Brandt",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/elena-marchetti-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Elena",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Marchetti",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/marco-halvorsen-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Marco",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Halvorsen",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/ines-ferreira-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Ines",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Ferreira",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/rachael-adeyemi-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Rachael",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Adeyemi",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000DANAK",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000DANAK",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000DANAK",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/dana-kowalski-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Dana",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Kowalski",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/yusuf-demir-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Yusuf",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Demir",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/noor-haddad-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Noor",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Haddad",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/kwame-boateng-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Kwame",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Boateng",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE",
+      "hostIdentityUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE",
+      "backendUrn": "urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE",
+      "memberBadgeType": null,
+      "preview": null,
+      "participantType": {
+        "member": {
+          "profileUrl": "https://www.linkedin.com/in/silje-nordmark-synthetic",
+          "firstName": {
+            "attributes": [],
+            "text": "Silje",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "lastName": {
+            "attributes": [],
+            "text": "Nordmark",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "headline": {
+            "attributes": [],
+            "text": "Synthetic fixture participant",
+            "$type": "com.linkedin.pemberly.text.AttributedText"
+          },
+          "profilePicture": null,
+          "pronoun": null,
+          "distance": "DISTANCE_1",
+          "$type": "com.linkedin.messenger.MemberParticipantInfo"
+        },
+        "$type": "com.linkedin.messenger.ParticipantType"
+      },
+      "$type": "com.linkedin.messenger.MessagingParticipant"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw0==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw0==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000PRIYA",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw0==)",
+      "body": {
+        "attributes": [],
+        "text": "Thanks for the review notes - I have folded them in and the pipeline is green again.",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783583400000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw1==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000TOMAS",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw1==)",
+      "body": {
+        "attributes": [],
+        "text": "Following up on the platform engineer role: is the team still hiring for a September start?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783579800000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw2==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw2==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000ELENA",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw2==)",
+      "body": {
+        "attributes": [],
+        "text": "That build cache write-up was useful. Did you ever measure the cold-start case?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783576200000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw3==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw3==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000MARCO",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw3==)",
+      "body": {
+        "attributes": [],
+        "text": "Are you around on Thursday for a short call about the scheduler migration?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783572600000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw4==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw4==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000INESF",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw4==)",
+      "body": {
+        "attributes": [],
+        "text": "Sharing the incident timeline template we talked about. Steal whatever is useful.",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783569000000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw5==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw5==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000RACHA",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw5==)",
+      "body": {
+        "attributes": [],
+        "text": "Welcome aboard, both of you - putting the three of us in one thread so nothing gets lost.",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783565400000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw6==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw6==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000YUSUF",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw6==)",
+      "body": {
+        "attributes": [],
+        "text": "The signed-artefact check caught two more today. Worth writing up.",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783561800000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw7==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw7==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000NOORH",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw7==)",
+      "body": {
+        "attributes": [],
+        "text": "No rush at all, but did the ownership script ever get a home outside your laptop?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783558200000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw8==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw8==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000KWAME",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw8==)",
+      "body": {
+        "attributes": [],
+        "text": "Congratulations on the move. Let me know once you are settled and I will send the intro.",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783554600000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    },
+    {
+      "entityUrn": "urn:li:msg_message:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw9==)",
+      "backendUrn": "urn:li:messagingMessage:2-U1lOVEhFVElDTVNHMDAwMDAwMDAwMDAwMDAwMDAw9==",
+      "*sender": "urn:li:msg_messagingParticipant:urn:li:fsd_profile:SYNTHETIC00000000000000000000000SILJE",
+      "*conversation": "urn:li:msg_conversation:(urn:li:fsd_profile:SYNTHETIC0000000000000000000000000SELF,2-U1lOVEhFVElDQ09OVjAwMDAwMDAwMDAwMDAwMDAw9==)",
+      "body": {
+        "attributes": [],
+        "text": "Quick one: which of the two scheduler proposals ended up shipping?",
+        "$type": "com.linkedin.pemberly.text.AttributedText"
+      },
+      "deliveredAt": 1783551000000,
+      "messageBodyRenderFormat": "DEFAULT",
+      "originToken": null,
+      "renderContent": [],
+      "reactionSummaries": [],
+      "subject": null,
+      "$type": "com.linkedin.messenger.Message"
+    }
+  ]
+}
