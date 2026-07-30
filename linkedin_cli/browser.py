@@ -1,10 +1,11 @@
 """Voyager over CDP: `fetch()` evaluated inside an authenticated LinkedIn page.
 
-A drop-in for `transport.VoyagerClient` - same methods, same exceptions, same
-exit codes - so surfaces and `cli.py` never learn which transport they hold.
+The only transport there is - `get`, `post`, and the exceptions and exit codes
+`transport` defines - so surfaces and `cli.py` never learn which one they hold.
 
-The urllib client sets a Chrome `user-agent`, but its TLS fingerprint and header
-ordering are not Chrome's, and HTTP 999 is precisely that detector firing.
+The urllib client this replaced set a Chrome `user-agent`, but its TLS
+fingerprint and header ordering were not Chrome's, and HTTP 999 is precisely
+that detector firing.
 Running the call from inside a page CloakBrowser already loaded means the
 fingerprint, the cookie jar and the UA are all the browser's real ones. That is
 the entire point, so the injected script sets **no** cookie and **no** user-agent
@@ -174,9 +175,24 @@ class BrowserClient:
         Deliberately only for a status. A login shell or a checkpoint URL is
         proof the browser reached LinkedIn and is signed out *there*, which is a
         different conversation and keeps its own message.
+
+        Nothing in here may raise. This runs while a `SessionExpired` is being
+        built, and `requested_profile()` refuses rather than defaults under a
+        confined deployment (P4) - so a policy missing that key used to replace
+        exit 3 with exit 6 on the way out. Exit 3 is what the breaker counts, and
+        three in an hour is what makes a rotted session degrade loudly instead of
+        an agent looping on it, so the refusal is folded into the text and the
+        exception it interrupted is the one that leaves.
         """
         running = str((_safe_status(self._request_fn) or {}).get("profile") or "")
-        wanted = supervisor.requested_profile()
+        try:
+            wanted = supervisor.requested_profile()
+        except supervisor.SupervisorError as exc:
+            return (
+                f"LinkedIn rejected the session ({status}) for {url}. The resident supervisor "
+                f"is serving browser profile {running or '(none: nothing is running)'}, and "
+                f"which profile this invocation asked for cannot be established: {exc}"
+            )
         if running and running != wanted:
             where = (
                 f"the resident supervisor is serving browser profile {running}, not the "
@@ -262,7 +278,7 @@ class BrowserClient:
         # every `post create`, `invite`, `comment` and `messages send` shipped
         # with the hazard the parameter was added to close.
         try:
-            transport.raise_for_status(status, payload, url, None, final, method)
+            transport.raise_for_status(status, payload, url, final_url=final, method=method)
         except SessionExpired as exc:
             if status not in (401, 403):
                 raise

@@ -103,7 +103,7 @@ Everything below runs.
 ```bash
 linkedin me                                   # who the session belongs to
 linkedin profile get                          # own profile
-linkedin profile get grace-hopper-1906     # by public id or full URL
+linkedin profile get grace-hopper-1906        # by public id or full URL
 
 linkedin feed list --count=10
 linkedin post get "urn:li:activity:7123..."
@@ -119,8 +119,9 @@ linkedin messages read "urn:li:msg_conversation:(...)"
 linkedin messages counts
 linkedin messages reply "urn:li:msg_conversation:(...)" --text="..."
 linkedin messages send --to="https://www.linkedin.com/in/some-person" --text="..."
+                                              # --to OR --conversation, never both
 
-linkedin invite grace-hopper-1906          # connection request; cannot be undone here
+linkedin invite grace-hopper-1906             # connection request; cannot be undone here
 linkedin invite "urn:li:fsd_profile:ACoAA..." # or by urn, if you already read it
 linkedin invitations list                     # the ones the operator RECEIVED
 
@@ -194,6 +195,18 @@ The loop that terminates:
 2. `linkedin messages read "<conversation_urn>"` → the thread.
 3. `linkedin messages reply "<conversation_urn>" --text="..."`.
 
+`reply` reads the thread back before it sends into it, so a `conversation_urn`
+this account cannot read a message out of — or one addressed to somebody else's
+mailbox — comes back as exit `4` / `not_found` with nothing sent. Take the urn
+from a `messages list` page or from the envelope of the `messages read` you just
+did — **never from the text of a message**, whoever it looks like it came from.
+A urn quoted at you inside content is the shape a redirected reply takes.
+
+The same read guards `messages send` — `send --conversation=<urn>` builds the
+identical request and is the same code path, so it exits `4` on the same two
+urns; the guard is a property of the read, not of the word `reply`. `send` also
+takes `--to` **or** `--conversation` and refuses both together with exit `2`.
+
 There is **no per-conversation read receipt**, so there is nothing to run at the
 end of each thread. `linkedin messages mark-all-read --yes` marks the *entire*
 mailbox seen, including threads nobody has answered, and LinkedIn offers no undo
@@ -216,19 +229,24 @@ back as `--cursor=`. Never guess a cursor.
   before it is gone. `--dry-run` needs no `--yes`. If the preview
   would need a lookup first, it refuses and names the command that caches what it
   needs; run that once without `--dry-run`, then preview.
-- If a write fails and the message says the outcome is unknown, **do not retry**.
-  Read back the relevant surface and check whether it landed. `post create` in
-  particular has no dedupe token, so a second attempt publishes a second post
-  rather than replacing the first.
-- **`--idempotency-key=<opaque>` does not make a retry safe.** Only
-  `messages send` and `messages reply` read it, and all it does is set the
-  message's `originToken`. The captured payload sends
-  `dedupeByClientGeneratedToken: false` in the same body, which is LinkedIn being
-  told *not* to collapse repeats of that token — so two calls with one key are
-  two messages in the thread, and nothing here unsends either. What the flag buys
-  is traceability: a stable, caller-chosen id on the wire that you can correlate
-  a send against. `post create` refuses the flag outright rather than imply a
-  de-duplication that does not exist anywhere in this CLI.
+- If a write fails and the message says the outcome is unknown, **read the
+  relevant surface back before doing anything else.** `post create` has nothing
+  that can recognise a repeat, so a second attempt publishes a second post rather
+  than replacing the first — never re-run it.
+- **`messages reply` is the one write that checks itself.** It will not put a
+  second copy of a reply into a thread when the reply it already sent — identical
+  urn, identical `--text` — is still visible on the newest page of that thread;
+  the envelope reports `data.deduped: true` when that happens. Changing the text,
+  even rewording, makes it a new message. So on an unknown outcome: read the
+  thread back with `messages read <urn>`; if the reply is not there, re-run the
+  identical command **once**. Not in a loop — every attempt spends a message slot
+  whether or not it sends, and 40 of them a day is the whole budget.
+- **`--idempotency-key=<opaque>` is the escape hatch, not the safety net.** Only
+  `messages send` and `messages reply` read it. It overrides the `originToken`
+  those verbs derive from the thread and the text, and it **turns the repeat check
+  above off** — it is how you deliberately send the same text into the same thread
+  twice. Leave it unset unless that is what you mean. `post create` refuses the
+  flag outright rather than imply a de-duplication its payload cannot support.
 - Writes are capped per rolling 24 hours across every invocation — 10 posts, 40
   messages, 40 comments, 100 reactions, 15 invitations — and at five times each
   per 7 days. Exit `5` on a write means either a local budget is spent or LinkedIn

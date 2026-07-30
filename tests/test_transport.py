@@ -1,15 +1,15 @@
-"""Voyager HTTP client: header construction, error taxonomy, pacing.
+"""The Voyager error taxonomy: classification, redaction, retryability.
 
-No network. A stub opener stands in for urllib so every failure mode LinkedIn
-actually produces can be reproduced deterministically.
+No network and no client. Every function under test derives its answer from its
+arguments, so the failure modes LinkedIn actually produces are reproduced by
+handing them straight to `raise_for_status`, `parse` or `classify_url` - or, for
+the cases where the seam matters, by driving `browser.BrowserClient` with an
+injected `request_fn`.
 """
 
 import ast
-import gzip
 import inspect
 import json
-import socket
-import urllib.error
 from http.client import HTTPMessage
 from pathlib import Path
 
@@ -19,26 +19,20 @@ from linkedin_cli import browser, transport
 from linkedin_cli.transport import (
     Blocked,
     NotFound,
-    OutcomeUnknown,
     RateLimited,
     SessionExpired,
-    StaleQueryId,
     UpstreamError,
-    VoyagerClient,
 )
 from tools import leakcheck
 
-COOKIES = {
-    "li_at": "AQEDATestToken",
-    "JSESSIONID": '"ajax:1111222233334444555"',
-    "liap": "true",
-    "lidc": "b=OB01:s=O:r=O",
-    "bcookie": "v=2&abc",
-    "bscookie": "v=1&def",
-    # deliberately noisy: values containing ';' must never reach the header
-    "li_alerts": "e30=;path=/;domain=.linkedin.com",
-    "UserMatchHistory": "AQK;xyz",
-}
+# The two trees a resurrected urllib client could live in. The urllib-user guard
+# and the client-construction guard at the bottom of this file must never drift
+# apart: a guard that watches one tree and a guard that watches both is how the
+# second path came back last time.
+_SCANNED_TREES = (
+    Path(transport.__file__).resolve().parent,
+    Path(__file__).resolve().parent.parent / "tools",
+)
 
 
 def msg(**headers) -> HTTPMessage:
@@ -50,465 +44,20 @@ def msg(**headers) -> HTTPMessage:
     return m
 
 
-class Resp:
-    def __init__(self, status=200, body=b"{}", headers=None, url="https://www.linkedin.com/x"):
-        self.status = status
-        self._body = body
-        self.headers = headers or {}
-        self.url = url
-
-    def read(self):
-        return self._body
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *a):
-        return False
-
-
-class StubOpener:
-    """Returns queued responses and records the requests it was given."""
-
-    def __init__(self, responses):
-        self.responses = list(responses)
-        self.requests = []
-
-    def open(self, req, timeout=None):
-        self.requests.append(req)
-        r = self.responses.pop(0)
-        if isinstance(r, Exception):
-            raise r
-        return r
-
-
-class FakeState:
-    """Stands in for the flock-guarded cross-process pacer."""
-
-    def __init__(self):
-        self.waits = []
-
-    def wait_for_slot(self, min_interval):
-        self.waits.append(min_interval)
-        return 0.0
-
-
-def client(responses, **kw):
-    opener = StubOpener(responses)
-    kw.setdefault("rate", 0.0)
-    c = VoyagerClient(dict(COOKIES), opener=opener, **kw)
-    return c, opener
-
-
-@pytest.fixture(autouse=True)
-def no_backoff_sleep(monkeypatch):
-    """Retry backoff is real seconds; the suite should not pay for them."""
-    slept = []
-    monkeypatch.setattr(transport.time, "sleep", slept.append)
-    return slept
-
-
-# --------------------------------------------------------------------------- headers
-
-
-def test_cookie_header_contains_only_essential_cookies():
-    """Regression: extra LinkedIn cookies embed ';' and truncate the header."""
-    c, op = client([Resp(body=b'{"ok":1}')])
-    c.get("me")
-    cookie = op.requests[0].get_header("Cookie")
-    names = {p.split("=")[0].strip() for p in cookie.split("; ")}
-    assert names == {"li_at", "JSESSIONID", "liap", "lidc", "bcookie", "bscookie"}
-    assert "li_alerts" not in cookie
-    assert ";path=/" not in cookie
-
-
-def test_csrf_token_is_jsessionid_without_quotes():
-    c, op = client([Resp(body=b"{}")])
-    c.get("me")
-    assert op.requests[0].get_header("Csrf-token") == "ajax:1111222233334444555"
-
-
-def test_required_voyager_headers_present():
-    c, op = client([Resp(body=b"{}")])
-    c.get("me")
-    r = op.requests[0]
-    assert r.get_header("X-restli-protocol-version") == "2.0.0"
-    assert "vnd.linkedin.normalized+json" in r.get_header("Accept")
-    assert "Chrome" in r.get_header("User-agent")
-
-
-# --------------------------------------------------------------------------- errors
-
-
-def test_self_redirect_302_without_new_cookie_is_session_expired():
-    """LinkedIn's signature for a dead session: 302 to the very same URL."""
-    url = "https://www.linkedin.com/voyager/api/me"
-    c, op = client([Resp(status=302, headers=msg(Location=url), url=url)])
-    with pytest.raises(SessionExpired) as exc:
-        c.get("me")
-    assert "auth seed" in str(exc.value)
-    assert exc.value.exit_code == 3
-    assert len(op.requests) == 1
-
-
-def test_self_redirect_with_set_cookie_is_retried_once():
-    """A self-redirect can just mean we had not applied a Set-Cookie yet."""
-    url = "https://www.linkedin.com/voyager/api/me"
-    redirect = Resp(
-        status=302,
-        headers=msg(Location=url, Set_Cookie='JSESSIONID="ajax:999"; Path=/'),
-        url=url,
-    )
-    c, op = client([redirect, Resp(body=b'{"data":1}')])
-    assert c.get("me") == {"data": 1}
-    assert len(op.requests) == 2
-    # the retry must carry the cookie we just learned about, csrf included
-    assert 'JSESSIONID="ajax:999"' in op.requests[1].get_header("Cookie")
-    assert op.requests[1].get_header("Csrf-token") == "ajax:999"
-
-
-def test_second_self_redirect_is_session_expired():
-    url = "https://www.linkedin.com/voyager/api/me"
-
-    def redirect(value):
-        return Resp(status=302, headers=msg(Location=url, Set_Cookie=value), url=url)
-
-    c, op = client([redirect('JSESSIONID="ajax:1"; Path=/'), redirect('JSESSIONID="ajax:2"')])
-    with pytest.raises(SessionExpired):
-        c.get("me")
-    assert len(op.requests) == 2
-
-
-def test_401_is_session_expired():
-    c, _ = client([Resp(status=401, body=b"nope")])
-    with pytest.raises(SessionExpired):
-        c.get("me")
-
-
-def test_404_is_not_found():
-    c, _ = client([Resp(status=404, body=b"missing")])
-    with pytest.raises(NotFound) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 4
-
-
-def test_999_is_blocked_and_actionable():
-    """LinkedIn returns a bare 999 when it decides you look automated."""
-    c, op = client([Resp(status=999, body=b"")])
-    with pytest.raises(Blocked) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 9
-    # A hard block, not a transient throttle: retrying digs the hole deeper.
-    assert exc.value.retryable is False
-    assert len(op.requests) == 1
-
-
-def test_challenge_redirect_is_blocked():
-    c, _ = client(
-        [
-            Resp(
-                status=302,
-                headers=msg(Location="https://www.linkedin.com/checkpoint/challenge/AgH?ct=1"),
-            )
-        ]
-    )
-    with pytest.raises(Blocked) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 9
-
-
-def test_checkpoint_redirect_is_blocked():
-    c, _ = client(
-        [Resp(status=303, headers=msg(Location="https://www.linkedin.com/checkpoint/lg"))]
-    )
-    with pytest.raises(Blocked):
-        c.get("me")
-
-
-def test_429_is_rate_limited_and_retryable():
-    c, _ = client([Resp(status=429, headers=msg(Retry_After="0"))] * 6, max_retries=0)
-    with pytest.raises(RateLimited) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 5
-    assert exc.value.retryable is True
-
-
-def test_400_mentioning_queryid_is_stale_query_id():
-    body = b'{"message":"Unrecognized queryId messengerConversations.deadbeef"}'
-    c, _ = client([Resp(status=400, body=body)])
-    with pytest.raises(StaleQueryId) as exc:
-        c.get("voyagerMessagingGraphQL/graphql?queryId=messengerConversations.deadbeef")
-    assert exc.value.exit_code == 7
-    assert "doctor" in str(exc.value)
-
-
-def test_gzipped_error_body_is_decoded_before_classification():
-    body = gzip.compress(b'{"message":"Unrecognized queryId messengerMessages.dead"}')
-    c, _ = client([Resp(status=400, body=body, headers=msg(Content_Encoding="gzip"))])
-    with pytest.raises(StaleQueryId):
-        c.get("voyagerMessagingGraphQL/graphql?queryId=messengerMessages.dead")
-
-
-def test_plain_400_is_upstream_error():
-    c, _ = client([Resp(status=400, body=b'{"message":"bad param"}')])
-    with pytest.raises(UpstreamError) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 6
-
-
-def test_html_200_at_a_voyager_path_is_session_expired():
-    """A login/interstitial page comes back as 200 text/html, not as an error -
-    and a Voyager path never legitimately serves HTML, so this is a dead session
-    rather than the exit 6 an agent would retry."""
-    page = b"<!DOCTYPE html><html><head><title>LinkedIn</title></head><body>Sign in</body></html>"
-    c, _ = client([Resp(body=page, headers=msg(Content_Type="text/html; charset=utf-8"))])
-    with pytest.raises(SessionExpired) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 3
-    assert "auth seed" in str(exc.value)
-
-
-# --------------------------------------------------------------------------- cookies
-
-
-def test_set_cookie_updates_are_captured():
-    """LinkedIn rotates `lidc` for datacenter routing; keep the fresh value."""
-    c, _ = client([Resp(body=b"{}", headers=msg(Set_Cookie='lidc="b=NEW:s=N"; Path=/'))])
-    c.get("me")
-    assert "NEW" in c.cookies["lidc"]
-
-
-def test_every_set_cookie_header_is_captured():
-    """`headers.get()` returns one header and silently drops the rest."""
-    headers = msg(Set_Cookie=['lidc="b=NEW"; Path=/', 'JSESSIONID="ajax:777"; Path=/'])
-    c, _ = client([Resp(body=b"{}", headers=headers)])
-    c.get("me")
-    assert c.cookies["lidc"] == '"b=NEW"'
-    assert c.cookies["JSESSIONID"] == '"ajax:777"'
-
-
-def test_set_cookie_with_comma_in_expires_is_parsed():
-    """Joining headers on ',' mis-parses Expires dates - parse each separately."""
-    headers = msg(
-        Set_Cookie=[
-            "lidc=b=NEW:s=N; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/",
-            'JSESSIONID="ajax:888"; Expires=Thu, 22 Oct 2026 07:28:00 GMT',
-        ]
-    )
-    c, _ = client([Resp(body=b"{}", headers=headers)])
-    c.get("me")
-    assert c.cookies["lidc"] == "b=NEW:s=N"
-    assert c.cookies["JSESSIONID"] == '"ajax:888"'
-
-
-def test_rotated_jsessionid_keeps_its_quotes():
-    """LinkedIn wants JSESSIONID quoted in Cookie and unquoted in csrf-token."""
-    c, op = client([Resp(body=b"{}", headers=msg(Set_Cookie='JSESSIONID="ajax:222"')), Resp()])
-    c.get("me")
-    c.get("me")
-    assert c.cookies["JSESSIONID"] == '"ajax:222"'
-    assert 'JSESSIONID="ajax:222"' in op.requests[1].get_header("Cookie")
-    assert op.requests[1].get_header("Csrf-token") == "ajax:222"
-
-
-def test_rotated_cookies_are_reported_for_write_back():
-    seen = []
-    c, _ = client(
-        [Resp(body=b"{}", headers=msg(Set_Cookie='JSESSIONID="ajax:new"; Path=/'))],
-        on_cookies_changed=seen.append,
-    )
-    c.get("me")
-    assert len(seen) == 1
-    assert seen[0]["JSESSIONID"] == '"ajax:new"'
-    assert seen[0]["li_at"] == COOKIES["li_at"]
-
-
-def test_unchanged_cookies_do_not_trigger_write_back():
-    seen = []
-    headers = msg(Set_Cookie=f"lidc={COOKIES['lidc']}; Path=/")
-    c, _ = client([Resp(body=b"{}", headers=headers)], on_cookies_changed=seen.append)
-    c.get("me")
-    assert seen == []
-
-
-# --------------------------------------------------------------------------- pacing
-
-
-def test_pacing_delegates_to_the_cross_process_state():
-    """Per-process pacing is inert in a CLI; the ledger has to be shared."""
-    state = FakeState()
-    c, _ = client([Resp(body=b"{}"), Resp(body=b"{}")], rate=2.0, state=state)
-    c.get("me")
-    c.get("me")
-    assert state.waits == [0.5, 0.5]
-
-
-def test_rate_zero_never_consults_state():
-    state = FakeState()
-    c, _ = client([Resp(body=b"{}")], rate=0.0, state=state)
-    c.get("me")
-    assert state.waits == []
-
-
-def test_each_retry_takes_its_own_slot():
-    state = FakeState()
-    c, _ = client(
-        [Resp(status=429, headers=msg(Retry_After="0")), Resp(body=b'{"data":1}')],
-        rate=1.0,
-        state=state,
-    )
-    assert c.get("me") == {"data": 1}
-    assert len(state.waits) == 2
-
-
-# --------------------------------------------------------------------------- behaviour
-
-
-def test_gzip_response_is_decoded():
-    payload = json.dumps({"data": {"hello": "world"}}).encode()
-    gz = gzip.compress(payload)
-    c, _ = client([Resp(body=gz, headers=msg(Content_Encoding="gzip"))])
-    assert c.get("me")["data"]["hello"] == "world"
-
-
-def test_429_is_retried_then_succeeds():
-    c, op = client([Resp(status=429, headers=msg(Retry_After="0")), Resp(body=b'{"data":1}')])
-    assert c.get("me") == {"data": 1}
-    assert len(op.requests) == 2
-
-
-def test_429_gives_up_after_max_retries():
-    c, _ = client([Resp(status=429, headers=msg(Retry_After="0"))] * 6, max_retries=2)
-    with pytest.raises(RateLimited):
-        c.get("me")
-
-
-def test_writes_are_never_auto_retried():
-    """A retried POST can double-send a message; refuse it."""
-    c, op = client([Resp(status=429, headers=msg(Retry_After="0")), Resp(body=b"{}")])
-    with pytest.raises(RateLimited):
-        c.post("some/action", {"a": 1})
-    assert len(op.requests) == 1
-
-
-def test_post_sends_json_body_and_csrf():
-    c, op = client([Resp(body=b"{}")])
-    c.post("voyagerMessagingDashMessengerMessages?action=createMessage", {"x": 1})
-    req = op.requests[0]
-    assert req.get_method() == "POST"
-    assert json.loads(req.data) == {"x": 1}
-    assert req.get_header("Content-type") == "application/json; charset=UTF-8"
-
-
-# --------------------------------------------------------------------- outcome classification
-
-
-def test_connection_refused_is_retried_even_for_a_write():
-    """Refused means nothing was written to the socket, so a POST is safe."""
-    c, op = client([urllib.error.URLError(ConnectionRefusedError(61, "refused")), Resp(body=b"{}")])
-    assert c.post("some/action", {"a": 1}) == {}
-    assert len(op.requests) == 2
-
-
-def test_dns_failure_exhausted_is_reported_as_not_delivered():
-    c, _ = client([urllib.error.URLError(socket.gaierror(8, "nodename"))] * 5, max_retries=1)
-    with pytest.raises(UpstreamError) as exc:
-        c.post("some/action", {"a": 1})
-    assert not isinstance(exc.value, OutcomeUnknown)
-    assert "never reached LinkedIn" in str(exc.value)
-
-
-def test_timeout_on_a_write_is_outcome_unknown():
-    """The request was already on the wire; only LinkedIn knows if it landed."""
-    c, op = client([TimeoutError("timed out")])
-    with pytest.raises(OutcomeUnknown) as exc:
-        c.post("some/action", {"a": 1})
-    assert exc.value.exit_code == 6
-    assert exc.value.retryable is False
-    assert "check" in str(exc.value).lower()
-    assert len(op.requests) == 1
-
-
-def test_connection_reset_on_a_write_is_outcome_unknown():
-    c, op = client([urllib.error.URLError(ConnectionResetError(54, "reset by peer"))])
-    with pytest.raises(OutcomeUnknown):
-        c.post("some/action", {"a": 1})
-    assert len(op.requests) == 1
-
-
-def test_timeout_on_a_read_is_retried():
-    """A GET has no outcome to be unknown about."""
-    c, op = client([TimeoutError("timed out"), Resp(body=b'{"data":1}')])
-    assert c.get("me") == {"data": 1}
-    assert len(op.requests) == 2
-
-
-def test_timeout_on_a_read_gives_up_as_upstream_error():
-    c, _ = client([TimeoutError("timed out")] * 5, max_retries=1)
-    with pytest.raises(UpstreamError):
-        c.get("me")
-
-
-# --------------------------------------------------------------------------- dry run
-
-
-def test_dry_run_returns_request_without_sending():
-    c, op = client([])
-    preview = c.post("x/y?action=create", {"b": 2}, dry_run=True)
-    assert preview["method"] == "POST"
-    assert preview["body"] == {"b": 2}
-    assert op.requests == []
-    # cookies must never appear in a preview an agent might print
-    assert "li_at" not in json.dumps(preview)
-
-
-def test_dry_run_never_leaks_the_csrf_token():
-    """csrf-token *is* the JSESSIONID value: a denylist would print a credential."""
-    c, _ = client([])
-    preview = c.get("me", dry_run=True)
-    dumped = json.dumps(preview)
-    assert "ajax:1111222233334444555" not in dumped
-    assert preview["headers"]["csrf-token"] == "<redacted>"
-    assert preview["headers"]["Cookie"] == "<redacted>"
-
-
-def test_dry_run_redaction_is_an_allowlist():
-    c, _ = client([])
-    preview = c.post("x/y?action=create", {"b": 2}, dry_run=True)
-    for name, value in preview["headers"].items():
-        if name.lower() in transport.SAFE_PREVIEW_HEADERS:
-            assert value != "<redacted>"
-        else:
-            assert value == "<redacted>", f"{name} survived redaction"
-    assert preview["headers"]["accept"] == "application/vnd.linkedin.normalized+json+2.1"
-    assert "Chrome" in preview["headers"]["user-agent"]
-
-
 # ----------------------------------------------------------------------- wire contract
 
 
 def test_classification_is_callable_without_a_client():
-    """The browser transport owns no VoyagerClient, so the taxonomy cannot live
+    """The browser transport holds no client object, so the taxonomy cannot live
     on one - otherwise it gets copied, and the copy drifts."""
     assert transport.parse(b'{"a": 1}', msg(), transport.BASE + "me") == {"a": 1}
     with pytest.raises(NotFound):
         transport.raise_for_status(404, b"missing", transport.BASE + "me")
 
 
-def test_raise_for_status_needs_neither_location_nor_final_url():
-    """`fetch` reports no Location and, on a plain 200, no distinct final URL."""
+def test_raise_for_status_needs_no_final_url():
+    """On a plain 200 `fetch` reports no final URL distinct from the request's."""
     transport.raise_for_status(200, b"{}", transport.BASE + "me")
-
-
-def test_the_client_classifies_through_the_module_level_functions(monkeypatch):
-    """Pin the delegation: a second taxonomy inside the client would answer a
-    different exit code than the browser transport within one release."""
-    seen = []
-    monkeypatch.setattr(transport, "raise_for_status", lambda *a, **k: seen.append(a))
-    monkeypatch.setattr(transport, "parse", lambda *a, **k: {"sentinel": True})
-    c, _ = client([Resp(status=418, body=b"whatever")])
-    assert c.get("me") == {"sentinel": True}
-    assert seen and seen[0][0] == 418
 
 
 def test_html_for_a_voyager_path_is_session_expired():
@@ -666,37 +215,6 @@ def test_the_final_url_outranks_the_status_code():
         )
 
 
-def test_a_redirect_to_a_login_shell_is_session_expired():
-    """The transport that declines redirects only ever sees the Location."""
-    with pytest.raises(SessionExpired):
-        transport.raise_for_status(
-            302, b"", transport.BASE + "me", location="https://www.linkedin.com/uas/login"
-        )
-
-
-def test_the_shim_forwards_final_url_into_the_final_url_slot():
-    """`browser.py` reaches the taxonomy only through this shim, and `location`
-    and `final_url` are adjacent optionals that mean opposite things. Swap them
-    and a checkpoint arriving as a 200 goes back to exiting 6 with no test
-    failing anywhere, because nothing else calls the shim."""
-    with pytest.raises(Blocked):
-        VoyagerClient._raise_for_status(
-            None, 200, b"", transport.BASE + "me", None, "https://www.linkedin.com/checkpoint/lg"
-        )
-
-
-def test_a_checkpoint_page_served_as_200_reaches_the_caller_as_blocked():
-    """End to end through the client, because this is the case the breaker
-    exists for: `_request` catches `RateLimited` around `raise_for_status`, and
-    a `parse` result is returned rather than raised, so a taxonomy that is right
-    in isolation can still be swallowed on the way out."""
-    body = b'<html><form action="/checkpoint/challenge/AgH">Verify</form></html>'
-    c, _ = client([Resp(body=body, headers=msg(Content_Type="text/html"))])
-    with pytest.raises(Blocked) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 9
-
-
 def test_no_remediation_string_names_the_verb_the_pivot_deletes():
     """`auth sync` decrypted cookies out of the operator's own Chrome profile.
     The browser pivot deletes it for `auth seed`, and an error that tells an
@@ -708,17 +226,28 @@ def test_no_remediation_string_names_the_verb_the_pivot_deletes():
 
 
 def test_the_names_browser_py_imports_stay_exported():
-    """browser.py builds its own previews and URLs off these four."""
+    """browser.py builds its own previews and URLs off these, and this is now the
+    only thing standing between the constant pruning and one constant too many.
+
+    `ESSENTIAL_COOKIES`, `USER_AGENT`, `NEVER_SENT` and `REDIRECT_CODES` went
+    with the urllib client, cleared by grep - but a `getattr(transport, name)`
+    would have evaded that grep, so the surviving set is pinned by name here.
+    `REDIRECT_CODES` is deliberately absent: it is deleted on purpose, because
+    the one transport follows redirects and nothing can reach a 3xx arm.
+    """
     assert transport.BASE.endswith("/voyager/api/")
+    assert transport.API_PATH == "/voyager/api/"
     assert transport.REDACTED == "<redacted>"
     assert "/checkpoint/" in transport.CHALLENGE_MARKERS
     assert "user-agent" in transport.SAFE_PREVIEW_HEADERS
     assert "csrf-token" not in transport.SAFE_PREVIEW_HEADERS
+    assert "GET" in transport.IDEMPOTENT_METHODS
 
 
 # ------------------------------------------------------------------- body redaction
 #
-# The dry-run preview above has always been redacted. The *error* path was not:
+# The dry-run preview has always been redacted (`tests/test_browser.py`). The
+# *error* path was not:
 # `raise_for_status` spliced the response body into `UpstreamError`, `cli._report`
 # renders that into `{"ok": false, "error": {"message": ...}}` on stderr, and under
 # an agent gateway this CLI's stderr becomes permanent model context. A login, checkpoint or
@@ -727,7 +256,7 @@ def test_the_names_browser_py_imports_stay_exported():
 
 
 def credential_body() -> bytes:
-    """A body carrying one of every credential shape this client holds.
+    """A body carrying one of every credential shape LinkedIn hands back.
 
     Assembled from pieces rather than written out: a literal live-shaped `li_at`
     or member id in a tracked file is precisely what `tools/leakcheck.py` fails
@@ -808,15 +337,6 @@ def test_the_scrubbed_body_is_still_capped():
     assert len(str(exc.value)) < 700
 
 
-def test_an_error_body_is_scrubbed_on_the_way_out_of_the_client():
-    """End to end, because the message is built in one place and rendered in
-    another: the value that matters is the one `cli._report` gets handed."""
-    c, _ = client([Resp(status=500, body=credential_body())])
-    with pytest.raises(UpstreamError) as exc:
-        c.get("me")
-    assert "ajax:1111222233334444555" not in str(exc.value)
-
-
 # --------------------------------------------------- redaction of the URL, not just the body
 #
 # The body was scrubbed and the *URL it came from* was not. `_classified` spliced
@@ -828,9 +348,8 @@ def test_an_error_body_is_scrubbed_on_the_way_out_of_the_client():
 # Driven through `BrowserClient` rather than `raise_for_status`, because that is
 # the transport `cli` holds: `browser.py` passes the URL `fetch` landed on as
 # `final_url`, which makes a classified URL the common case here rather than a
-# corner of it. The unclassified redirect three lines further down has been
-# scrubbed all along - "its query string is theirs to fill" - and this is the
-# same argument about the same string.
+# corner of it - and, now that the redirect arm has gone with the urllib client,
+# the only case there is.
 
 
 class Pacer:
@@ -883,16 +402,6 @@ def test_the_scrubbed_url_still_says_where_the_answer_came_from():
     assert "auth seed" in text
 
 
-def test_a_classified_redirect_location_is_scrubbed_too():
-    """The transport that declines redirects reaches `_classified` by the other
-    door, with `location` instead of `final_url`, and LinkedIn fills that query
-    string with exactly the same thing."""
-    with pytest.raises(SessionExpired) as exc:
-        transport.raise_for_status(302, b"", transport.BASE + "me", location=LOGIN_URL)
-    for label, pattern in leakcheck.PATTERNS:
-        assert not pattern.findall(str(exc.value)), label
-
-
 # ------------------------------------------------------- retryability of a throttle
 #
 # `retryable` is not advice, it is an instruction an agent branches on, and the
@@ -900,31 +409,6 @@ def test_a_classified_redirect_location_is_scrubbed_too():
 # reported retryable on that request publishes the post twice. The transport
 # already refuses to auto-retry a write on this exact status - telling the caller
 # to do what the transport itself will not do is the contradiction being fixed.
-
-
-def test_a_503_on_a_read_is_retryable():
-    c, _ = client([Resp(status=503)] * 6, max_retries=0)
-    with pytest.raises(RateLimited) as exc:
-        c.get("me")
-    assert exc.value.exit_code == 5
-    assert exc.value.retryable is True
-
-
-def test_a_503_on_a_write_is_not_reported_retryable():
-    """The gateway may have given up *after* LinkedIn processed the request."""
-    c, op = client([Resp(status=503)])
-    with pytest.raises(RateLimited) as exc:
-        c.post("some/action", {"a": 1})
-    assert exc.value.retryable is False
-    assert len(op.requests) == 1
-
-
-def test_a_429_on_a_write_is_not_reported_retryable():
-    c, op = client([Resp(status=429, headers=msg(Retry_After="0"))])
-    with pytest.raises(RateLimited) as exc:
-        c.post("some/action", {"a": 1})
-    assert exc.value.retryable is False
-    assert len(op.requests) == 1
 
 
 def test_raise_for_status_reads_the_method_for_retryability():
@@ -960,22 +444,197 @@ def test_every_taxonomy_call_site_in_the_package_names_its_method():
     `retryable: true` on a 429 for `post create` - and that omission shipped
     once already, from `browser.py`, with nothing failing to say so."""
     package = Path(transport.__file__).resolve().parent
+    seen = 0
     for source in sorted(package.rglob("*.py")):
         for node in ast.walk(ast.parse(source.read_text())):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
             name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
-            if name not in ("raise_for_status", "_raise_for_status"):
+            if name != "raise_for_status":
                 continue
-            # `method` is the sixth parameter, so six positionals reach it too.
-            named = any(kw.arg == "method" for kw in node.keywords) or len(node.args) >= 6
+            seen += 1
+            # `method` is the fifth parameter now that `location` has gone, so
+            # five positionals reach it too. Left at six this would have accepted
+            # every call site by matching none of them.
+            named = any(kw.arg == "method" for kw in node.keywords) or len(node.args) >= 5
             assert named, f"{source.name}:{node.lineno} reaches the taxonomy with no method"
+    # The floor. With one call site left in the package, a loop that walked,
+    # filtered and found nothing would pass green - so rewriting `browser.py`'s
+    # call as `raise_for_status(*args)`, or hiding it behind a differently-named
+    # helper, would silently disarm this guard rather than trip it.
+    assert seen == 1, f"the taxonomy guard matched {seen} call sites; browser.py should be the one"
 
 
-def test_the_shim_forwards_the_method_into_the_method_slot():
-    """Same trap as `final_url` above: `browser.py` reaches the taxonomy through
-    this shim, and a method that never arrives silently restores the default."""
-    with pytest.raises(RateLimited) as exc:
-        VoyagerClient._raise_for_status(None, 503, b"", transport.BASE + "me", None, None, "POST")
-    assert exc.value.retryable is False
+# ------------------------------------------------------------- no second transport
+#
+# The browser pivot deleted `tools/acquire.py` and left its consumer behind, so
+# a ~30-line file is all that stands between this package and a second,
+# supervisor-free path to LinkedIn - one that bypasses `browser.py`, carries a
+# raw cookie header and has the TLS fingerprint HTTP 999 detects. The three
+# guards below are what turn restoring it from an easy accident into a red test.
+
+_URLLIB_CLIENT_NAMES = ("build_opener", "OpenerDirector", "HTTPRedirectHandler")
+
+
+def _scanned_modules():
+    """Every `*.py` under `_SCANNED_TREES`, parsed once, with its file name."""
+    for tree in _SCANNED_TREES:
+        for source in sorted(tree.rglob("*.py")):
+            yield source.name, ast.parse(source.read_text())
+
+
+def _urllib_request_users(modules) -> set:
+    """File names that reach urllib's **request** machinery, by any spelling.
+
+    Split out of the guard below so the detector can be exercised against
+    spellings that are not in the tree. The whole-package equality can only ever
+    test the spellings somebody already wrote; a resurrection will be written by
+    whoever is resurrecting it, so the shapes it does *not* catch are exactly the
+    ones no test could reach.
+    """
+    users = set()
+    for name, module in modules:
+        for node in ast.walk(module):
+            if isinstance(node, ast.Import):
+                # `import urllib.request` and `import urllib.request as u` both
+                # carry the dotted name. Deliberately NOT a prefix match on
+                # "urllib": `transport.py` imports `urllib.parse` for `quote`.
+                if any(alias.name == "urllib.request" for alias in node.names):
+                    users.add(name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module == "urllib.request" or (
+                    node.module == "urllib" and any(a.name == "request" for a in node.names)
+                ):
+                    users.add(name)
+            elif isinstance(node, ast.Attribute):
+                if node.attr in _URLLIB_CLIENT_NAMES:
+                    users.add(name)
+                # `import urllib` + `urllib.request.urlopen(...)`. The import is
+                # of the *package*, so no dotted name appears and every check
+                # above misses it. Standalone that spelling would AttributeError
+                # - but `cdp.py` does `import urllib.request`, which binds the
+                # submodule onto the package object for the whole process, and
+                # `bootstrap.py`/`supervisor.py` import `cdp`. So inside THIS
+                # package it runs, and the exemption is what arms it.
+                elif (
+                    node.attr == "request"
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id == "urllib"
+                ):
+                    users.add(name)
+            elif isinstance(node, ast.Name) and node.id in _URLLIB_CLIENT_NAMES:
+                users.add(name)
+    return users
+
+
+# (source, why) - every spelling that reaches a urllib opener. The last entry is
+# the one that shipped undetected: the CHANGELOG and the deletion commit both
+# claimed a resurrected client "fails three tests", and for this spelling it
+# failed none.
+_URLLIB_SPELLINGS = (
+    ("import urllib.request\nurllib.request.urlopen(x)", "dotted submodule import"),
+    ("import urllib.request as u\nu.urlopen(x)", "aliased submodule import"),
+    ("from urllib.request import urlopen\nurlopen(x)", "from-import of the opener"),
+    ("from urllib import request\nrequest.urlopen(x)", "from-import of the submodule"),
+    ("from urllib.request import build_opener\nbuild_opener()", "opener factory"),
+    ("import urllib\nurllib.request.urlopen(x)", "bare package import, attribute chain"),
+)
+
+
+@pytest.mark.parametrize("source,why", _URLLIB_SPELLINGS, ids=[w for _, w in _URLLIB_SPELLINGS])
+def test_every_spelling_of_a_urllib_client_is_detected(source, why):
+    """The detector is tested against source it will never otherwise see.
+
+    Without this, `_urllib_request_users` is only ever run over files that are
+    already clean, so a spelling it cannot see is indistinguishable from a
+    spelling that is absent - which is how the bare-`import urllib` form passed
+    the entire suite while the CHANGELOG and the deletion commit said it could
+    not.
+    """
+    assert _urllib_request_users([("planted.py", ast.parse(source))]) == {"planted.py"}, why
+
+
+def test_urllib_parse_is_not_mistaken_for_a_client():
+    """`transport.py` imports `urllib.parse` for `quote` and must stay clean, so
+    the detector cannot simply match the `urllib` prefix. This is the assertion
+    that stops the fix above from being 'flag everything named urllib'."""
+    source = "import urllib.parse\nurllib.parse.quote(s, safe='')"
+    assert _urllib_request_users([("planted.py", ast.parse(source))]) == set()
+
+
+def test_the_only_urllib_user_is_the_loopback_cdp_helper():
+    """`cdp.py` is the exemption, and the exemption is checked rather than trusted.
+
+    An equality, not an absence: `cdp.py` genuinely speaks urllib, to the
+    loopback CDP debug port, and `bootstrap.py`/`supervisor.py` import it - so
+    "no urllib in the package" is a guard that could never go green. Stated as
+    a set equality it stays red both when a urllib LinkedIn client comes back
+    *and* when somebody quietly widens the exemption to a second file.
+    """
+    assert _urllib_request_users(_scanned_modules()) == {"cdp.py"}
+
+    # ...and why that one is safe: every `urllib.request` reference in `cdp.py`
+    # is inside `_http_json`, and every call to `_http_json` targets a literal
+    # `http://` prefix - i.e. plaintext loopback, which cannot be a LinkedIn
+    # client. Deliberately *not* "cdp.py never mentions linkedin.com": it does,
+    # over the CDP websocket, and asserting otherwise would ship red.
+    cdp_source = Path(transport.__file__).resolve().parent / "cdp.py"
+    cdp_module = ast.parse(cdp_source.read_text())
+    helper = next(
+        node
+        for node in ast.walk(cdp_module)
+        if isinstance(node, ast.FunctionDef) and node.name == "_http_json"
+    )
+    for node in ast.walk(cdp_module):
+        if (
+            isinstance(node, ast.Attribute)
+            and node.attr == "request"
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "urllib"
+        ):
+            assert helper.lineno <= node.lineno <= helper.end_lineno, node.lineno
+    calls = [
+        node
+        for node in ast.walk(cdp_module)
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "_http_json"
+    ]
+    assert calls, "nothing calls _http_json; the exemption is no longer scoped by it"
+    for call in calls:
+        target = call.args[0]
+        assert isinstance(target, ast.JoinedStr), ast.dump(target)
+        leading = target.values[0]
+        assert isinstance(leading, ast.Constant), ast.dump(target)
+        assert leading.value.startswith("http://"), leading.value
+
+
+def test_transport_exports_no_client():
+    """The taxonomy module holds no client, and not one under another name either.
+
+    The second clause is what makes this non-vacuous against a
+    rename-instead-of-delete: `class VoyagerClient` reappearing as
+    `class LegacyClient` would satisfy the first assertion alone.
+    """
+    assert not hasattr(transport, "VoyagerClient")
+    assert [name for name in dir(transport) if name.endswith("Client")] == []
+
+
+def test_the_only_voyager_client_is_the_browser_one():
+    """One transport, constructed in one place.
+
+    Scoped to `tools/` as well as the package, which is the half that makes it
+    bite: restricted to `linkedin_cli/` it passes at HEAD and proves nothing,
+    because `cli.py`'s `browser.BrowserClient(...)` is already the only
+    construction there. `tools/resilient.py` was the live counter-example.
+    Being a set equality it also has a floor: an empty set fails.
+    """
+    constructed = set()
+    for _source, module in _scanned_modules():
+        for node in ast.walk(module):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+            if name.endswith("Client"):
+                constructed.add(name)
+    assert constructed == {"BrowserClient"}, constructed

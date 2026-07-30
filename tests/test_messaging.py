@@ -532,7 +532,13 @@ def test_an_unconfirmed_send_sends_the_operator_to_read_the_thread():
 
 def test_an_unconfirmed_send_is_not_reported_as_retryable():
     """`cli._report` renders `.retryable` into the envelope an agent branches on,
-    and a retry that lands is a second message to a real person."""
+    and a retry that lands is a second message to a real person.
+
+    Unchanged and still green after `messages reply` grew a repeat check, and
+    that is the point: the check is best effort - one page, exact text, blind to
+    a write that has not appeared yet - so a machine-readable "yes, retry" would
+    be a promise it cannot keep. The verdict used to be derived from the wire
+    field the payload carries; same verdict, different reason."""
     for result in ({}, {"errors": [{"message": "nope"}]}, {"data": {"*value": None}}):
         with pytest.raises(UpstreamError) as exc:
             send(result)

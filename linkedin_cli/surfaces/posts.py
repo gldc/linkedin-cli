@@ -14,14 +14,13 @@ one call with a flag.
 
 Three properties of the create drive everything below.
 
-* **There is no dedupe token.** The captured share payload carries nothing of
-  the kind, and nothing in it is derived from the text either. Do not read that
-  as a contrast with messaging: `createMessage` does carry an `originToken`, but
-  the same captured body sends `dedupeByClientGeneratedToken: false`, which is
-  LinkedIn being told *not* to collapse repeats of it. Neither write is
-  idempotent, and a docstring here once said otherwise - an agent that believed
-  it would retry a message into a real person's thread. So two
-  identical requests are two public posts, and this surface is deliberately
+* **There is no dedupe token, and nothing to read back.** The captured share
+  payload carries nothing of the kind, and nothing in it is derived from the text
+  either. `messages reply` *is* protected against an identical re-run - it checks
+  the newest page of the thread it is replying into before it sends - and that
+  contrast is now real, where an earlier docstring here had it backwards. It does
+  not transfer: a share has no thread to read back and no token to match, so two
+  identical requests are two public posts. This surface is therefore deliberately
   *single-shot*: one `client.post` on every path, no retry loop, and every
   failure it raises is non-retryable and says so in words. That constraint has to
   survive people editing this file, which is why `create` has no attempt counter

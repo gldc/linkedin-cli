@@ -199,12 +199,12 @@ def delete_comment(client: Any, urn: Any, dry_run: bool = False) -> dict:
     refused here is the one failure neither `transport.raise_for_status` nor an
     empty-body check can see: LinkedIn saying no inside a 2xx.
 
-    `client` has no `delete`. Both transports build every call from
-    `_request(method, path, body, dry_run)` and expose only `get` and `post` on
+    `client` has no `delete`. The transport builds every call from
+    `_request(method, path, body, dry_run)` and exposes only `get` and `post` on
     top of it, and this is the CLI's first DELETE; a `delete` method on
-    `transport.VoyagerClient` and `browser.BrowserClient` is the better home for
-    it and is a change to two files this one does not own. So `_request` is used
-    directly - and it should keep being used even once those grow a `delete`,
+    `browser.BrowserClient` is the better home for it and is a change to a file
+    this one does not own. So `_request` is used
+    directly - and it should keep being used even once that grows a `delete`,
     because `_request` is the seam `cli._WriteWatch` wraps. A write that reaches
     the wire through a method the watch does not know about never sets
     `attempted_write`, so the ledger slot `cli._write` claimed for it is handed

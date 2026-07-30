@@ -121,9 +121,9 @@ _DEFAULT = object()
 class FakeClient:
     """Records requests and replays one canned answer. No transport, no network.
 
-    `_request` is here because `delete_comment` needs a method neither
-    `transport.VoyagerClient` nor `browser.BrowserClient` exposes: both build
-    every call from `_request(method, path, body, dry_run)` and put only `get`
+    `_request` is here because `delete_comment` needs a method
+    `browser.BrowserClient` does not expose: it builds
+    every call from `_request(method, path, body, dry_run)` and puts only `get`
     and `post` on top of it. The fake mirrors that shape rather than inventing a
     friendlier one, or the surface would be tested against a client the CLI does
     not have.

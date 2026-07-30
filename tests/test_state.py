@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from linkedin_cli import state
+from linkedin_cli import state, supervisor
 from linkedin_cli.state import Blocked, State, Throttled, WriteQuotaExceeded
 
 DAY = 86400
@@ -82,6 +82,40 @@ def test_resolve_path_expands_a_tilde(monkeypatch):
 
 def test_resolve_path_ignores_a_blank_env_override(monkeypatch):
     monkeypatch.setenv("LINKEDIN_STATE_FILE", "   ")
+    assert state.resolve_path() == state.DEFAULT_PATH
+
+
+def test_a_confined_deployment_refuses_the_default_ledger(monkeypatch):
+    """`DEFAULT_PATH` sits under `$HOME`, and under credexec `HOME` is an image
+    layer that `docker compose up -d` destroys. So a policy that lost
+    `LINKEDIN_STATE_FILE` does not fail - it silently relocates the ledger onto a
+    surface that is wiped on every redeploy, where an absent file is read as an
+    honest zero (this module's own "absent is not corrupt" rule). That resets the
+    40/day message cap, any live throttle cooldown and an OPEN circuit breaker in
+    one step, and takes the supervisor socket with it, because the socket is
+    derived from this file's parent. Failing closed is what makes it visible."""
+    monkeypatch.delenv("LINKEDIN_STATE_FILE")
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    with pytest.raises(supervisor.SupervisorError) as caught:
+        state.resolve_path()
+    assert state.STATE_FILE_ENV in str(caught.value)
+
+
+def test_a_confined_deployment_still_uses_the_ledger_it_is_given(tmp_path, monkeypatch):
+    """Fail *closed*, not fail always: the policy sets the variable, and the
+    tenant has to work when it does."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.setenv("LINKEDIN_STATE_FILE", str(tmp_path / "linkedin-state" / "state.json"))
+    assert state.resolve_path() == tmp_path / "linkedin-state" / "state.json"
+
+
+def test_only_the_credexec_deployment_refuses_the_default_ledger(monkeypatch):
+    """One exact value, for the reason the browser resolvers compare against one:
+    refusing every unrecognised name would refuse a developer who exported the
+    variable for something else, and would still not catch a `LINKEDIN_DEPLOYMENT`
+    the policy misspelled."""
+    monkeypatch.delenv("LINKEDIN_STATE_FILE")
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, "laptop")
     assert state.resolve_path() == state.DEFAULT_PATH
 
 

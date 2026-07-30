@@ -5,7 +5,7 @@ CDP rides descriptors the browser inherits (`--remote-debugging-pipe`, see
 invocation is a short-lived process. Something has to outlive the CLI and hold
 the credential, which is what this module is.
 
-It deliberately is **not** a debug port. That was tested in the real an agent gateway
+It deliberately is **not** a debug port. That was tested in the real agent gateway
 container: an unprivileged uid enumerated the port out of `/proc/net/tcp`,
 connected with zero credentials, and could have read `li_at` straight out of
 `Network.getCookies` - or issued authenticated writes past the broker allowlist,
@@ -37,6 +37,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from . import cdp, pipe, state, transport
 
@@ -71,9 +72,8 @@ PAGE_URL = ORIGIN + "/feed/"
 # invocation without an override opened it empty, and the 401 that came back
 # reads exactly like a session LinkedIn had killed.
 # A deployment default, not a discovery mechanism: whoever runs this in a
-# container knows where they put the browser. `resolve_binary` falls back to
-# whatever is on PATH so a checkout is usable without setting anything, and
-# LINKEDIN_BROWSER_BINARY beats both.
+# container knows where they put the browser. LINKEDIN_BROWSER_BINARY beats it,
+# and `resolve_binary` additionally searches PATH for something to fall back on.
 DEFAULT_BINARY = "/opt/linkedin-cli/browser/chrome"
 DEFAULT_PROFILE = "/opt/linkedin-cli/profile"
 
@@ -89,6 +89,26 @@ BINARY_CANDIDATES = (
 )
 BINARY_ENV = "LINKEDIN_BROWSER_BINARY"
 PROFILE_ENV = "LINKEDIN_BROWSER_PROFILE"
+
+# Which deployment this invocation is running under, and the one value that
+# changes anything. Both defaults above **fail open**, and under a credential
+# broker that is a code-substitution path rather than an inconvenience: in such a
+# container the path `DEFAULT_BINARY` names is owned and writable by the untrusted
+# agent uid, while the CLI itself runs as the uid holding every tenant's
+# credentials. A missing or misspelled key in the broker policy would
+# therefore exec whatever that uid last wrote there, as the credential holder,
+# with no error and no audit line to notice afterwards. So under this deployment
+# the built-in defaults are refused rather than used, and a policy that forgot a
+# key fails loudly on the first call instead of quietly on every one.
+#
+# The comparison is exact, against the single deployment that exists. Treating
+# any unrecognised value as confined would refuse anyone who exported the
+# variable for something else, and it would still not catch the case worth
+# worrying about: a `LINKEDIN_DEPLOYMENT` misspelled in the policy arms nothing
+# here whatever it is compared against. The broker's own load-time assertions are
+# what cover that half.
+DEPLOYMENT_ENV = "LINKEDIN_DEPLOYMENT"
+CONFINED_DEPLOYMENT = "credexec"
 
 # `--window-size` is deliberately absent: passing it still yields 800x600 under
 # `--headless=new`, because the flag is ignored there.
@@ -121,10 +141,10 @@ MAX_REQUEST = 1 << 20
 # written by this package and can be bounded tightly; a response is whatever
 # LinkedIn decided to send, and `feed list --count=30` is routinely over a
 # megabyte - thirty posts, each with an author, a social detail and several image
-# artifacts. One constant served both directions until a live run, when a live
-# run reported `the supervisor stopped answering: the message is too long` for a
-# page LinkedIn had returned perfectly well. The reasoning above was sound about
-# requests and was never true of answers.
+# artifacts. One constant served both directions until a live run reported `the
+# supervisor stopped answering: the message is too long` for a page LinkedIn had
+# returned perfectly well. The reasoning above was sound about requests and was
+# never true of answers.
 #
 # Still bounded, because the supervisor is not obliged to buffer an unbounded
 # stream just because the peer is trusted - but bounded at a size no real page
@@ -168,6 +188,18 @@ class SupervisorError(Exception):
     exit_code = 6
 
 
+class NoFallback(SupervisorError):
+    """A key the confined deployment was supposed to supply is not set.
+
+    A type rather than a message, because the same refusal is raised on both
+    sides of the socket and the two sides classified it differently: the client's
+    annotation called it `config` while the daemon's dispatcher fell through
+    `_kind` to `upstream`, so what an operator was told depended on which op ran
+    first. `upstream` sends them to restart a browser over a line missing from
+    the tenant's policy. One classifier now reads this type - see `_kind`.
+    """
+
+
 # --------------------------------------------------------------------- paths
 
 
@@ -188,6 +220,28 @@ def _resolve(socket_path: str | Path | None) -> Path:
     return Path(socket_path) if socket_path is not None else default_socket_path()
 
 
+def confined() -> bool:
+    """Whether the built-in defaults are refused rather than fallen back to."""
+    return os.environ.get(DEPLOYMENT_ENV, "").strip() == CONFINED_DEPLOYMENT
+
+
+def no_fallback(what: str, env: str, why: str) -> NoFallback:
+    """The refusal every confined resolver raises, in one place so they cannot drift.
+
+    Three of them now, and the third is `state.resolve_path` in the module this
+    one imports - so this is spelled without the underscore rather than copied
+    across the seam, which is how the two halves of the browser resolver drifted
+    the first time.
+    """
+    return NoFallback(
+        f"{env} is not set and this invocation is running under "
+        f"{DEPLOYMENT_ENV}={CONFINED_DEPLOYMENT}, where the built-in {what} is refused rather "
+        f"than used. {why} Set {env}: the confined deployment supplies it in the tenant's "
+        "policy, so an unset one is a key that policy lost rather than a machine that needs "
+        "the default."
+    )
+
+
 def requested_profile() -> str:
     """The profile *this* invocation would open a browser on.
 
@@ -195,7 +249,42 @@ def requested_profile() -> str:
     client knows, and the other half - what a resident supervisor already
     opened - can only be asked over the socket.
     """
-    return os.environ.get(PROFILE_ENV, "").strip() or DEFAULT_PROFILE
+    override = os.environ.get(PROFILE_ENV, "").strip()
+    if override:
+        return override
+    if confined():
+        raise no_fallback(
+            "profile",
+            PROFILE_ENV,
+            f"{DEFAULT_PROFILE} is the profile the confined deployment moved *out* of, so "
+            "opening it reaches a directory this uid has no session in - and the 401 that "
+            "comes back reads exactly like a dead account, which is how a re-seed that "
+            "invalidated a live session got started once already.",
+        )
+    return DEFAULT_PROFILE
+
+
+def requested_binary() -> str:
+    """The browser *this* invocation would execute. Refused, not defaulted, when confined.
+
+    Split out of `Browser.launch` so it fails closed on the same terms the
+    profile does: the two used to be one `or` chain each, and only one of them
+    was ever the documented risk.
+    """
+    override = os.environ.get(BINARY_ENV, "").strip()
+    if override:
+        return override
+    if confined():
+        raise no_fallback(
+            "binary",
+            BINARY_ENV,
+            f"{DEFAULT_BINARY} is writable by the untrusted uid this deployment exists to keep "
+            "away from the credential, so falling back to it would execute whatever that uid "
+            "last wrote there as the uid holding every tenant's credentials.",
+        )
+    # Unconfined, no override: the ordinary resolution chain, PATH discovery
+    # included. Only a confined deployment refuses to guess.
+    return resolve_binary()
 
 
 def resolve_binary() -> str:
@@ -374,23 +463,40 @@ def read_line(sock, limit: int = MAX_REQUEST) -> bytes:
 def _failure(message: str, kind: str) -> dict:
     """The one error shape both ends speak.
 
-    `kind` is transport-level only - closed, timeout, upstream - and never a
-    LinkedIn verdict: naming a session expired or a client blocked is
-    `transport.py`'s job, and a copy of that taxonomy in here would drift from
-    it one deploy after it was written.
+    `kind` never carries a LinkedIn verdict: naming a session expired or a client
+    blocked is `transport.py`'s job, and a copy of that taxonomy in here would
+    drift from it one deploy after it was written. Three of the four are
+    transport - closed, timeout, upstream.
+
+    The fourth, `config`, is this side refusing before the wire rather than
+    anything that happened on it, and it exists because it was being spelled
+    `closed`: a confined deployment missing a policy key came back as "the
+    supervisor stopped answering" from a supervisor that had answered fine, which
+    sends an operator to restart a healthy daemon and never mentions the key.
+    Which of the four a raised exception is belongs to `_kind` and to nothing
+    else - a caller that decides for itself is how `config` and `upstream` came
+    to name the same refusal.
     """
     return {"error": message, "kind": kind}
 
 
 def _kind(exc: BaseException) -> str:
-    """Which of the three transport failures this is.
+    """Which of the four failures this is. The only place that decides.
 
     The `__cause__` hop is not defensive programming. `cdp.CDPSession.call`
     catches `TimeoutError` and re-raises a `CDPError` that is *not* one,
     chaining the original - so after that conversion the chained cause is the
     only surviving evidence that the browser was slow rather than the script
     broken, and the two differ in what the caller should do next.
+
+    `NoFallback` is here rather than at each raise site for the reason
+    `no_fallback` itself is one function: the same lost policy key is refused on
+    both sides of the socket, and it used to answer `config` from `_annotate` and
+    `upstream` from `_dispatch` - one cause, two diagnoses, chosen by which op
+    the caller happened to run.
     """
+    if isinstance(exc, NoFallback):
+        return "config"
     if isinstance(exc, pipe.PipeClosed):
         return "closed"
     if isinstance(exc, TimeoutError) or isinstance(exc.__cause__, TimeoutError):
@@ -558,6 +664,65 @@ def _serve_connection(connection, resident, path: Path, started_at: float) -> bo
     return keep
 
 
+def _reported_page_url(href: str) -> str:
+    """Where the page is, without what the query string carries.
+
+    A checkpoint URL echoes the csrf token back as `?ct=` (`transport.py:284`),
+    and the csrf token **is** the JSESSIONID cookie value - so `location.href`
+    handed out whole is a live session credential, on a success path where
+    nothing downstream scrubs. `render.ok` cannot: `profile get` legitimately
+    returns an `ACoAA…` member urn that the same patterns would eat.
+
+    Cut here, at the source, rather than in either caller: this dict reaches
+    output down two paths, and a reduction in one of them leaves the other open.
+    `cli.doctor` renders it, and `browser.py` returns it verbatim as a
+    `--dry-run` preview's `runs_in` - the second being an allowlisted verb that
+    skips the ledger, the cap, the breaker and every LinkedIn round trip, i.e. a
+    credential oracle repeatable at whatever rate the caller is paced to. The
+    first attempt at this fix reduced it in `cmd_doctor` alone and left that one
+    standing; the test passed, because it only ever exercised `doctor`.
+
+    The path survives, and that is the point of keeping the field at all: "which
+    page is it on" is the question `status` exists to answer (`Browser.page_url`)
+    and `/checkpoint/challenge/…` is that answer. Only the query goes.
+
+    A URL with no path of its own falls back to everything but the query, which
+    is `_reported_location` below. Two cases arrive that way and both are pages
+    that most need naming: `chrome-error://chromewebdata`, where the request
+    never left the browser - the shape an over-grown Cookie header produces
+    (`Browser.seed`) - and `about:blank`, which is where every target starts and
+    what `Browser._navigate` refuses over when a navigation does not commit.
+
+    The `netloc` half of the first branch is what makes the second case work.
+    `about:blank` has no authority, so `urlsplit` calls the whole of it a
+    `.path` - and cutting to the path alone renamed a diagnosis this module
+    writes its own error message about to `blank`, a page by no name at all.
+    """
+    split = urlsplit(str(href))
+    if split.path and split.netloc:
+        return split.path
+    return _reported_location(href)
+
+
+def _reported_location(href: str) -> str:
+    """The whole of `href` except its query string and fragment.
+
+    The same cut as `_reported_page_url` and a different amount kept, because
+    the two callers need different halves: `status` answers "which page", where
+    the host is always linkedin.com and the path carries the diagnosis, while
+    `Browser._navigate` refuses precisely *because* the host may no longer be
+    linkedin.com - so naming the origin it landed on is the whole message.
+
+    `hostname` rather than `netloc`: an authority can carry `user:password@`,
+    and a credential in the URL is the one thing this reduction exists to keep
+    out of an answer. Anything that parses as no part of a URL comes back empty
+    rather than guessed at - an unparsed href is exactly where a query string
+    would still be hiding.
+    """
+    split = urlsplit(str(href))
+    return urlunsplit((split.scheme, split.hostname or "", split.path, "", ""))
+
+
 def _dispatch(payload, resident, path: Path, started_at: float) -> tuple[dict, bool]:
     if not isinstance(payload, dict):
         return _failure("the request must be a JSON object", "upstream"), True
@@ -579,7 +744,7 @@ def _dispatch(payload, resident, path: Path, started_at: float) -> tuple[dict, b
                 # is the thing that is broken.
                 "log": str(log_path(path)),
                 "profile": resident.profile,
-                "page_url": resident.page_url(),
+                "page_url": _reported_page_url(resident.page_url()),
                 "relaunched": resident.relaunched,
                 "started_at": started_at,
             }, True
@@ -690,7 +855,17 @@ def request(
     daemon itself uses, so `browser.py` has exactly one thing to check and the
     taxonomy stays in `transport.py`.
     """
-    path = _resolve(socket_path)
+    # Inside the promise, not in front of it. The socket path is derived from
+    # the ledger's parent, and `state.resolve_path` *refuses* under a confined
+    # deployment rather than defaulting - so the one lost policy key that
+    # reaches this function before anything is connected used to escape it as an
+    # exception. `browser.py` catches that as "the browser supervisor failed" and
+    # calls a POST which never left this process `outcome_unknown`, telling an
+    # agent a message may have landed when nothing was ever sent.
+    try:
+        path = _resolve(socket_path)
+    except SupervisorError as exc:
+        return _failure(str(exc), _kind(exc))
     factory = sock or _unix_socket
 
     # Encoded before anything is connected or started: a payload that cannot be
@@ -735,13 +910,24 @@ def _annotate(payload, answer: dict) -> dict:
     were the intended one. The comparison is here rather than in the daemon
     because only this side knows both halves: the daemon's environment was
     frozen whenever it started, which may have been days ago.
+
+    The resolver it asks can *refuse* - see `requested_profile` - and that
+    refusal is caught here rather than left to `request`'s handler, which reports
+    "the supervisor stopped answering". It answered; this side does not know what
+    to compare its answer against. Reported as the config failure it is, and the
+    daemon's status is dropped with it deliberately: an unannotated status is the
+    running profile read as though it were the intended one, which is the exact
+    failure this function exists to prevent.
     """
     if not isinstance(payload, dict) or payload.get("op") != "status":
         return answer
     if "profile" not in answer:
         return answer
 
-    wanted = requested_profile()
+    try:
+        wanted = requested_profile()
+    except SupervisorError as exc:
+        return _failure(str(exc), _kind(exc))
     running = str(answer.get("profile") or "")
     answer["requested_profile"] = wanted
     answer["profile_mismatch"] = bool(running) and running != wanted
@@ -979,7 +1165,7 @@ class Browser:
         identity=None,
         open_pipe=None,
     ) -> Browser:
-        binary = binary or resolve_binary()
+        binary = binary or requested_binary()
         profile_dir = profile_dir or requested_profile()
         extra = list(LAUNCH_ARGS)
         if os.environ.get(NO_SANDBOX_ENV, "").strip() not in ("", "0", "false"):
@@ -1092,8 +1278,17 @@ class Browser:
             if here.startswith(ORIGIN):
                 return
             if time.monotonic() > deadline:
+                # Reduced like every other href this daemon reports, and this
+                # one was the last that was not. It is only reachable when the
+                # page is *off* linkedin.com - a checkpoint returns above - so
+                # the `?ct=` leak that motivated the rule cannot arrive here;
+                # but "the query string is where the credential is" is the rule,
+                # not "linkedin.com's query string is", and this message is
+                # interpolated into `_failure(str(exc), …)` and handed to the
+                # client. Where it landed is what the message is for, so the
+                # origin and the path both survive.
                 raise SupervisorError(
-                    f"the page is on {here or 'about:blank'} rather than the "
+                    f"the page is on {_reported_location(here) or 'about:blank'} rather than the "
                     f"{ORIGIN} origin; the navigation did not take"
                 )
             # Polled rather than waiting on another load event: the load has

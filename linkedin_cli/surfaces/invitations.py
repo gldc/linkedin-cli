@@ -1,8 +1,8 @@
 """Connection requests: sending one, and reading the ones you were sent.
 
 Two halves with almost nothing in common, kept together because they are one
-LinkedIn surface and because the *missing* third half explains both. On
-a live run the invitation manager was observed live (docs/sdui-migration.md) and
+LinkedIn surface and because the *missing* third half explains both. The
+invitation manager was observed live (docs/sdui-migration.md) and
 it has left Voyager: the screen is server-driven UI, its data is rendered into
 the document, and pressing Withdraw posts a protobuf-shaped
 `proto.sdui.actions.core.NavigateToScreen` to `/flagship-web/` which answers with
@@ -106,8 +106,8 @@ RECEIVED_PATH = "relationships/invitationViews?count={count}&q=receivedInvitatio
 
 RECEIVED_DEFAULT_COUNT = 10
 
-# The evidence for both refusals below, gathered live and read-only on
-# a live run. Cited by name in the messages themselves so that the next reader
+# The evidence for both refusals below, gathered live and read-only.
+# Cited by name in the messages themselves so that the next reader
 # gets what was observed rather than somebody's conclusion about it - the two
 # stubs previously said "the payload was never captured", which reads as one
 # more careful capture run away, and that is exactly what the last session was
@@ -223,8 +223,8 @@ def list_received(
     The route rests on three agreeing reads; the contents rest on **one** row
     from **one** inbox, and that asymmetry is what this function is built around.
 
-    `relationships/invitationViews?q=receivedInvitation` was probed live on
-    a live run and answered 200 with `data.elements` and `data.paging`
+    `relationships/invitationViews?q=receivedInvitation` was probed live and
+    answered 200 with `data.elements` and `data.paging`
     (docs/sdui-migration.md). Three independent reads agreed - the finder,
     `relationships/invitationsSummary` reporting `numPendingInvitations: 0`, and
     the page itself rendering `All (0)` - which is what makes it a verified route

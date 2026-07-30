@@ -113,6 +113,84 @@ def test_a_launch_with_no_override_opens_the_default_profile(monkeypatch):
     assert opened == [supervisor.DEFAULT_PROFILE]
 
 
+def test_the_requested_binary_is_the_environment_override(monkeypatch):
+    monkeypatch.setenv(supervisor.BINARY_ENV, "/managed/browser/chrome")
+    assert supervisor.requested_binary() == "/managed/browser/chrome"
+
+
+def test_a_blank_binary_override_falls_back_to_the_default(monkeypatch):
+    monkeypatch.setenv(supervisor.BINARY_ENV, "   ")
+    assert supervisor.requested_binary() == supervisor.DEFAULT_BINARY
+
+
+# ------------------------------------------------------- the confined deployment
+
+
+def test_a_confined_deployment_refuses_the_built_in_binary(monkeypatch):
+    """`DEFAULT_BINARY` in the container is owned by the agent gateway's own uid
+    at mode 0755 - writable by the untrusted agent uid. Under the credential
+    broker the CLI runs as the uid holding *every* tenant's credentials, so a
+    missing or misspelled policy key falling back to that path execs whatever the
+    untrusted uid last wrote there, as the credential holder, with no error and
+    no audit signal. Failing closed is the only way that misconfiguration is
+    visible at all."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(supervisor.BINARY_ENV, raising=False)
+    with pytest.raises(supervisor.SupervisorError) as caught:
+        supervisor.requested_binary()
+    assert supervisor.BINARY_ENV in str(caught.value)
+
+
+def test_a_confined_deployment_refuses_the_built_in_profile(monkeypatch):
+    """The other half of the same fail-open. `DEFAULT_PROFILE` is the built-in
+    profile from before the broker, which this deployment moved: opening it
+    reaches a directory the confined uid has no session in, and the 401 that
+    comes back reads exactly like a dead account."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(supervisor.PROFILE_ENV, raising=False)
+    with pytest.raises(supervisor.SupervisorError) as caught:
+        supervisor.requested_profile()
+    assert supervisor.PROFILE_ENV in str(caught.value)
+
+
+def test_a_confined_deployment_still_honours_the_overrides_it_is_given(monkeypatch):
+    """Fail *closed*, not fail always: the policy sets both, and the tenant has
+    to work when it does."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.setenv(supervisor.BINARY_ENV, "/managed/browser/chrome")
+    monkeypatch.setenv(supervisor.PROFILE_ENV, "/managed/profile")
+    assert supervisor.requested_binary() == "/managed/browser/chrome"
+    assert supervisor.requested_profile() == "/managed/profile"
+
+
+def test_a_confined_launch_with_neither_override_starts_no_browser(monkeypatch):
+    """The refusal has to reach the launch, which is the thing that would have
+    run the attacker-writable binary."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(supervisor.BINARY_ENV, raising=False)
+    monkeypatch.delenv(supervisor.PROFILE_ENV, raising=False)
+
+    def open_pipe(binary, profile_dir, **kw):
+        raise AssertionError(f"a confined deployment launched {binary} on {profile_dir}")
+
+    with pytest.raises(supervisor.SupervisorError):
+        supervisor.Browser.launch(open_pipe=open_pipe)
+
+
+def test_only_the_confined_deployment_fails_closed(monkeypatch):
+    """The guard is armed by one exact value, because that is the one deployment
+    that exists (the credential broker's `child_env` sets it). An unrecognised
+    name is not treated as confined: it would refuse every developer who exported
+    the variable for something else, and it would not have caught the failure
+    this exists for anyway - a `LINKEDIN_DEPLOYMENT` misspelled in the policy
+    arms nothing, whatever this compares against."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, "laptop")
+    monkeypatch.delenv(supervisor.BINARY_ENV, raising=False)
+    monkeypatch.delenv(supervisor.PROFILE_ENV, raising=False)
+    assert supervisor.requested_binary() == supervisor.DEFAULT_BINARY
+    assert supervisor.requested_profile() == supervisor.DEFAULT_PROFILE
+
+
 # ------------------------------------------------------------------ permissions
 
 
@@ -281,7 +359,7 @@ def test_a_line_that_never_ends_is_refused_rather_than_buffered_forever():
 
 
 def test_a_response_may_be_larger_than_a_request_is_allowed_to_be():
-    """`feed list --count=30` died on this, live,.
+    """`feed list --count=30` died on this on a live run.
 
     One cap was serving two directions. `MAX_LINE` was sized as a bound on a
     broken *client* - "one request per connection and the largest is a write
@@ -749,13 +827,77 @@ def test_a_caller_that_hangs_up_before_asking_is_not_fatal(root, talk):
 # ------------------------------------------------------------------------ status
 
 
-def test_status_reports_the_live_page_url(root, talk):
+# A JSESSIONID value in the shape `transport._SECRET_VALUES` matches, and the one
+# `tools/leakcheck.py` already knows is synthetic. LinkedIn echoes this exact
+# value back as `?ct=` on a checkpoint URL (`transport.py`), so what these two
+# pin is the real leak rather than a stand-in for it.
+CSRF_TOKEN = "ajax:1111222233334444555"
+CHECKPOINT = f"https://www.linkedin.com/checkpoint/challenge/AgHRk?ct={CSRF_TOKEN}"
+
+
+def test_status_reports_the_path_of_the_live_page(root, talk):
     """Read from the document rather than echoed from a constant: "which page
     is it actually on" is the question status exists to answer, and a redirect
-    to a checkpoint is exactly the answer an operator needs to see."""
+    to a checkpoint is exactly the answer an operator needs to see. The path is
+    what carries that diagnosis, which is why the field survives at all."""
     ours, theirs = talk({"op": "status"})
-    serve(root, [theirs], FakeBrowser(page_url="https://www.linkedin.com/checkpoint/challenge"))
-    assert reply(ours)["page_url"] == "https://www.linkedin.com/checkpoint/challenge"
+    serve(root, [theirs], FakeBrowser(page_url=CHECKPOINT))
+    assert reply(ours)["page_url"] == "/checkpoint/challenge/AgHRk"
+
+
+def test_status_never_hands_out_the_query_string_of_the_live_page(root, talk):
+    """The `?ct=` a checkpoint URL carries back *is* the JSESSIONID cookie value
+    (`transport.py`), so `location.href` returned whole is a live credential.
+
+    Cut here, in the daemon, because there are two consumers and only one of
+    them was ever projected: `cli.doctor` reduced the field on its way into the
+    envelope, while `browser.py` returns this same dict verbatim as `runs_in` on
+    every `--dry-run` preview - a path with no LinkedIn round trip at all, and
+    therefore a repeatable oracle for anyone who can spell `--dry-run`."""
+    ours, theirs = talk({"op": "status"})
+    serve(root, [theirs], FakeBrowser(page_url=CHECKPOINT))
+    assert CSRF_TOKEN not in json.dumps(reply(ours))
+
+
+def test_status_still_names_a_page_that_has_no_path(root, talk):
+    """`chrome-error://chromewebdata` is the URL a browser lands on when the
+    request never made it - the shape a Cookie header grown too large produces,
+    which looks nothing like a cookie problem (`Browser.seed`). Its path is
+    empty, so cutting to the path alone reports the one page that most needs
+    naming as `""`. The scheme and host carry no query and no token."""
+    ours, theirs = talk({"op": "status"})
+    serve(root, [theirs], FakeBrowser(page_url="chrome-error://chromewebdata"))
+    assert reply(ours)["page_url"] == "chrome-error://chromewebdata"
+
+
+@pytest.mark.parametrize(
+    "href, reported",
+    [
+        # The page every target is created on, and the one `Browser._navigate`
+        # names when a load does not take. `urlsplit` calls the whole of an
+        # opaque URL its `.path`, so cutting to the path alone renamed the one
+        # diagnosis in this module that has its own error message to "blank".
+        ("about:blank", "about:blank"),
+        # Same shape, and it is why the fix is the scheme rather than a literal.
+        ("chrome://newtab", "chrome://newtab"),
+        ("chrome-error://chromewebdata", "chrome-error://chromewebdata"),
+        (CHECKPOINT, "/checkpoint/challenge/AgHRk"),
+        ("https://www.linkedin.com/feed/", "/feed/"),
+        ("", ""),
+    ],
+)
+def test_the_reported_page_url_keeps_the_diagnosis_and_drops_the_query(href, reported):
+    assert supervisor._reported_page_url(href) == reported
+
+
+def test_status_still_names_the_page_a_target_is_created_on(root, talk):
+    """`about:blank` is a named failure state in this module - the navigation
+    error at the bottom of `Browser._navigate` is written about exactly it - and
+    a status that answered "blank" sends an operator looking for a page by that
+    name instead of reading the browser as never having left its blank tab."""
+    ours, theirs = talk({"op": "status"})
+    serve(root, [theirs], FakeBrowser(page_url="about:blank"))
+    assert reply(ours)["page_url"] == "about:blank"
 
 
 def test_status_reports_the_pid_socket_and_profile(root, talk):
@@ -1220,6 +1362,70 @@ def test_a_status_that_failed_is_not_annotated(root, daemon):
     assert "profile_mismatch" not in answer
 
 
+def test_a_confined_invocation_with_no_profile_key_blames_the_policy_not_the_daemon(
+    root, daemon, monkeypatch
+):
+    """The annotation asks `requested_profile()`, which under the credential
+    broker *refuses* rather than defaulting - and that refusal was raised inside
+    the same `except` that means "the connection died mid-request". So a
+    supervisor that answered perfectly was reported as one that had stopped
+    answering, sending an operator to restart a daemon that is fine while the key
+    the policy dropped goes unmentioned. A misconfiguration has to read as a
+    misconfiguration."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(supervisor.PROFILE_ENV, raising=False)
+    fake = daemon(up=True, response={"pid": 7, "profile": "/managed/profile"})
+    answer = ask(fake, root / SOCKET, {"op": "status"})
+    assert answer["kind"] == "config"
+    assert supervisor.PROFILE_ENV in answer["error"]
+    assert "stopped answering" not in answer["error"]
+
+
+# ------------------------------------ one cause, one classification for it
+
+
+def test_a_lost_policy_key_is_classified_by_kind_rather_than_by_where_it_landed():
+    """`no_fallback` is the one refusal every confined resolver raises, and it
+    was reported as two different things depending on which side of the socket
+    it was raised on: `config` from the client's annotation, `upstream` from the
+    daemon, because `_kind` had no branch for it and fell through to its
+    transport default. An operator reading `upstream` restarts a browser over a
+    key the policy dropped."""
+    lost = supervisor.no_fallback("profile", supervisor.PROFILE_ENV, "because.")
+    assert supervisor._kind(lost) == "config"
+    assert isinstance(lost, supervisor.SupervisorError)
+
+
+def test_a_lost_policy_key_reaching_the_daemon_is_reported_as_config(root, talk):
+    """The daemon's half of the same cause. `Browser.launch` resolves both the
+    binary and the profile, and under the credential broker either can refuse -
+    which arrives in `_dispatch`'s broad except like any other failure."""
+    ours, theirs = talk({"op": "status"})
+    lost = supervisor.no_fallback("binary", supervisor.BINARY_ENV, "because.")
+    serve(root, [theirs], FakeBrowser(page_url=lost))
+    answer = reply(ours)
+    assert answer["kind"] == "config"
+    assert supervisor.BINARY_ENV in answer["error"]
+
+
+def test_a_lost_ledger_key_is_answered_rather_than_raised(monkeypatch):
+    """`request` promises never to raise, and this is the one input that made it.
+
+    The socket path is derived from the ledger's parent, and `state.resolve_path`
+    refuses under the credential broker rather than defaulting - so the same lost key that
+    `_annotate` reports as `config` escaped this function as an exception before
+    anything was connected. `browser.py` catches it as "the browser supervisor
+    failed" and calls a POST that never left this process `outcome_unknown`,
+    which tells an agent a message may have landed when nothing was sent.
+    """
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(state.STATE_FILE_ENV, raising=False)
+    monkeypatch.delenv(supervisor.SOCKET_ENV, raising=False)
+    answer = supervisor.request({"op": "status"}, autostart=False)
+    assert answer["kind"] == "config"
+    assert state.STATE_FILE_ENV in answer["error"]
+
+
 # ------------------------------------------------------------------ the log
 
 
@@ -1609,6 +1815,33 @@ def test_the_browser_is_started_once_however_many_fetches_arrive():
 def test_the_page_url_is_read_from_the_live_document():
     chromium = FakeChromium(page_url="https://www.linkedin.com/checkpoint/challenge")
     assert browser_on(chromium).page_url() == "https://www.linkedin.com/checkpoint/challenge"
+
+
+def test_a_navigation_that_did_not_take_names_the_page_without_its_query(monkeypatch):
+    """The last member of the class the `status` reduction closed.
+
+    `location.href` was interpolated raw into this refusal, and the refusal
+    reaches the client as `_failure(str(exc), ...)` - so the one path where the
+    page has slipped somewhere unexpected was also the one path that reported
+    the full URL of wherever it slipped to. Which origin it landed on is the
+    whole diagnosis and survives; the query string does not.
+    """
+    monkeypatch.setattr(supervisor, "LOAD_TIMEOUT", -1)
+    chromium = FakeChromium(page_url=f"https://sso.example/authorize?ct={CSRF_TOKEN}")
+    with pytest.raises(supervisor.SupervisorError) as caught:
+        browser_on(chromium).start()
+    message = str(caught.value)
+    assert CSRF_TOKEN not in message
+    assert "https://sso.example/authorize" in message
+
+
+def test_a_navigation_that_reported_no_page_at_all_still_names_about_blank(monkeypatch):
+    """The fallback survives the reduction: an empty `location.href` is the
+    blank document Chromium swaps in while a navigation commits, and naming it
+    is what tells an operator the page never went anywhere."""
+    monkeypatch.setattr(supervisor, "LOAD_TIMEOUT", -1)
+    with pytest.raises(supervisor.SupervisorError, match="about:blank"):
+        browser_on(FakeChromium(page_url="")).start()
 
 
 # ---------------------------------------------------------------------- closing

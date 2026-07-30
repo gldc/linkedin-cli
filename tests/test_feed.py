@@ -294,9 +294,9 @@ def shell(entity_urn: str, in_elements: bool = True) -> dict:
     Derived from the capture rather than invented: every live UpdateV2 in it
     carries `actor`, `commentary`, `updateMetadata.shareUrn` and a
     `*socialDetail` ref, and the entity urn is the five-field tuple. Live
-    verification recorded `post get` on a post this CLI had just
-    deleted answering `ok: true` with the content fields null - so what LinkedIn
-    hands back is one of these updates with everything but its identity gone.
+    verification recorded `post get` on a post this CLI had just deleted
+    answering `ok: true` with the content fields null - so what LinkedIn hands
+    back is one of these updates with everything but its identity gone.
 
     `in_elements=False` is the same shell arriving without the collection
     wrapper, which is the branch `get_post` falls through to `by_type` for.
@@ -371,11 +371,11 @@ def tombstone(entity_urn: str) -> dict:
 def test_a_deleted_post_is_refused_even_though_linkedin_fills_in_content(capture):
     """The live failure: `content` present, and it says the post is not there.
 
-    Measured live against a post this CLI had just deleted. `post get`
-    returned exit 0 with a live-looking permalink, because `content` was one of
-    the things counted as evidence and LinkedIn puts its "cannot be displayed"
-    placeholder there. A placeholder saying the post is unreadable is the single
-    worst thing to read as proof that it is readable.
+    Measured live against a post this CLI had just deleted. `post get` returned
+    exit 0 with a live-looking permalink, because `content` was one of the things
+    counted as evidence and LinkedIn puts its "cannot be displayed" placeholder
+    there. A placeholder saying the post is unreadable is the single worst thing
+    to read as proof that it is readable.
     """
     from linkedin_cli import transport
 
@@ -414,9 +414,9 @@ def entity_urn_from(capture: dict) -> str:
 def test_get_post_refuses_a_shell_rather_than_projecting_it(capture):
     """A deleted post is an UpdateV2 with no content, and it must not answer ok.
 
-    Measured live after `post delete` succeeded, `post get` on the
-    same urn returned `ok: true` with null fields. Every field the projection
-    could still fill - `activity_urn`, `posted_at`, `url` - is derived from the
+    Measured live: after `post delete` succeeded, `post get` on the same urn
+    returned `ok: true` with null fields. Every field the projection could still
+    fill - `activity_urn`, `posted_at`, `url` - is derived from the
     urn that was *sent*, so a projection of a shell is the request echoed back
     dressed as an answer. `post get` is the oracle `post delete` tells callers to
     read the post back with; an oracle that says "still there" about a post that

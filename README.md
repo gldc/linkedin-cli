@@ -192,7 +192,7 @@ linkedin comment delete <comment-urn>
 linkedin messages list [--unread-only] [--count=N] [--cursor=C]
 linkedin messages read <conversation-urn> [--count=N] [--cursor=C]
 linkedin messages counts
-linkedin messages send --to=<urn|profile-url> --text=... [--conversation=<urn>]
+linkedin messages send (--to=<urn|profile-url> | --conversation=<urn>) --text=...
 linkedin messages reply <conversation-urn> --text=...
 linkedin messages mark-all-read --yes
 
@@ -238,6 +238,34 @@ sample that retires that rule — the next shape it meets may be the second kind
 row, and an empty list is indistinguishable from an empty inbox while only one of
 those is a bug report. The invitations you have **sent** are a different matter;
 see [Not implemented](#not-implemented).
+
+**Sending a message costs one extra request, whichever verb sends it,** and it
+buys the only thing that ties a message to a thread this account is in. The
+createMessage body carries the conversation urn with no lookup — `reply <urn>`
+and `send --conversation=<urn>` build the identical request, and they now reach
+it through one function for exactly that reason — so the urn is read back first,
+and the answer has to clear two bars or it exits `4` with nothing sent: this
+session was served at least one message for it, and every conversation urn in
+that answer names **this account's own mailbox**. A conversation urn is
+`(<mailbox owner>,2-<thread>)`, so the second bar is what keeps a message inside
+this inbox, and it is read off LinkedIn's answer rather than off the argument.
+It costs no second request.
+
+The guard used to be on `reply` alone, and `send --conversation=<urn>` — the
+byte-identical request one branch down — was reachable with any urn at all.
+
+**`messages send` takes `--to` or `--conversation`, never both.** They name the
+destination twice and nothing here can reconcile them: the urn decides where the
+message lands on its own, so the recipient was simply dropped, and a `--to` that
+contributes nothing reads like a check that happened. Passing both is exit `2`.
+`send --conversation=<urn>` and `reply <urn>` are the same send.
+
+What that establishes is read access and the mailbox, not membership: the
+messages response carries no participant roster to check an owner against, so a
+thread this session cannot see and a thread whose messages were all deleted
+answer identically and that refusal names both instead of picking one.
+`--dry-run` skips the read, because a preview issues no requests and sends
+nothing to confine.
 
 `messages mark-all-read` is the whole mailbox, which is why it wants `--yes`.
 LinkedIn's captured payload is `markAllMessagesAsSeen` and carries a timestamp
@@ -334,15 +362,18 @@ Global in the sense that every command *accepts* them, but read by only some:
 
 Everywhere else those parse and are ignored.
 
-`--idempotency-key` sets `createMessage`'s `originToken`. **It does not make a
-retry safe, and nothing in this CLI does.** The captured body sends
-`dedupeByClientGeneratedToken: false` alongside that token, which is LinkedIn
-being told explicitly not to collapse repeats of it — so two calls with one key
-are two messages in the thread, and there is no unsend. What the flag buys is
-traceability: a stable, caller-chosen id on the wire, rather than the uuid4 that
-would otherwise be generated, so a send can be correlated afterwards. `post create`
-refuses the flag outright, because its payload has no field to put a token in at
-all and the caller reaching for the flag is the caller intending to retry.
+`--idempotency-key` overrides `createMessage`'s `originToken`, which `messages
+send` and `messages reply` otherwise derive from the mailbox, the thread and the
+text. **It is the escape hatch, not the safety net.** Left unset, an identical
+re-run is checked against the newest page of the thread before anything is sent
+and will not put a second copy of a reply this account can see it already sent
+there — the envelope reports `data.deduped`. Passing the key turns that check off,
+which is the point: it is the one way to send the same text into the same thread
+twice on purpose. The check is best effort — one page of the newest messages, an
+exact text match, and it cannot see a write that landed a moment ago and has not
+appeared yet — so read the thread back on an unknown outcome rather than assuming.
+There is no unsend. `post create` refuses the flag outright, because its payload
+has no field to put a token in at all and no thread to read back.
 
 `--raw` prints the upstream payload instead of the envelope on success, and on a
 failure attaches LinkedIn's own response under `error.body` — redacted, beside the
@@ -357,7 +388,7 @@ and never to a refusal this CLI made without asking LinkedIn.
 
 Per-command flags: `--from-profile` (`auth seed`) · `--text` (`post create`,
 `comment`, `messages send`, `messages reply`) · `--visibility` (`post create`) ·
-`--type` (`react`) · `--to`, `--conversation` (`messages send`) · `--yes`
+`--type` (`react`) · `--to` **or** `--conversation`, never both (`messages send`) · `--yes`
 (`messages mark-all-read`, `post delete`) · `--unread-only` (`messages list`,
 `notifications list`) · `--clear-breaker` (`doctor`) · `--note` (`invite`, and
 refused there — see above).
@@ -368,7 +399,7 @@ which only `LIKE` was on the wire in the capture; the rest are what the web clie
 sends and are unconfirmed.
 
 `--visibility` accepts exactly **one** value, `ANYONE`. It used to advertise
-`ANYONE|CONNECTIONS`, and `CONNECTIONS` was tried against the live account on
+`ANYONE|CONNECTIONS`, and `CONNECTIONS` was tried against the live account:
 LinkedIn answered HTTP `200` with `Invalid input for enum
 'dash_contentcreation_VisibilityType'. No value found for name 'CONNECTIONS'`. It
 was removed rather than kept as an unconfirmed option, so **there is no way to
@@ -537,8 +568,15 @@ you some:
 ## Development
 
 ```bash
-python3 -m pytest tests/ -q
+python3 -m pytest tests/ -q      # the suite
+git add -A && tools/check.sh     # the pre-merge gate
 ```
+
+`tools/check.sh` runs, in order, `ruff check`, `ruff format --check`, the suite,
+`coverage --fail-under=100` on `linkedin_cli/transport.py`, and
+`tools/leakcheck.py`; it exits non-zero on the first failure. There is no CI
+here, so that script is a discipline gate rather than an enforced one; promoting
+it to a workflow is the highest-value follow-up.
 
 The suite never touches the network, never launches a browser and never sleeps
 on a real clock: `tests/conftest.py` makes `subprocess.Popen`, `socket.connect`

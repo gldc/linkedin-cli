@@ -1,34 +1,30 @@
-"""HTTP client for LinkedIn's Voyager API.
+"""The Voyager error taxonomy: what a LinkedIn response means, in one place.
 
-Everything that talks to the network goes through here, which keeps the error
-taxonomy, the pacing policy and the outcome classification in exactly one place.
+Nothing here talks to the network. `browser.py` issues the request from inside
+an authenticated page and hands the result to these functions, which keeps the
+exit codes, the classification and the redaction rules in exactly one place
+instead of one copy per surface.
 
 The rules that matter most, all learned the hard way against the live API:
 
-* Send **only** the six essential cookies. Several other LinkedIn cookies carry
-  `;` or raw JSON in their values, which truncates the `Cookie` header and
-  silently drops `li_at` - producing an auth failure that looks like anything
-  but a cookie bug.
-* A `3xx` whose `Location` is the request URL usually means the session is dead,
-  but it is also what a client that ignored a `Set-Cookie` gets. So we absorb the
-  cookies and retry exactly once; only a second self-redirect is `SessionExpired`.
-  Redirects are never followed implicitly - urllib would loop until it gives up
-  with "infinite loop", and a checkpoint redirect would be swallowed.
 * Classification is module-level (`classify_url`, `raise_for_status`, `parse`)
   and derives everything from its arguments, because the transport that matters
-  now issues its requests from inside a page and has no client object to hang it
-  on. That transport's `fetch` **follows** redirects, so `Location` is always
-  `None` there: a dead session or a challenge arrives as an ordinary `200` whose
+  issues its requests from inside a page and has no client object to hang it
+  on. That transport's `fetch` **follows** redirects, so `Location` is never
+  seen here: a dead session or a challenge arrives as an ordinary `200` whose
   only tells are the URL the body came from and the HTML in it. Both are
   therefore checked unconditionally - a missed one exits 6, and 6 is the code an
   agent retries, against a client LinkedIn has already flagged.
-* `JSESSIONID` rotates mid-session and the csrf token derives from it, so every
-  `Set-Cookie` header must be read (`get_all`, not `get`) and parsed on its own,
-  and rotations handed to `on_cookies_changed` for write-back.
-* Pacing is cross-process. A per-process bucket resets on every CLI invocation
-  and enforces nothing, so the interval is claimed from `state.State`.
-* A failed write is classified, never silently retried: only a failure that
-  provably predates the first byte on the wire may be sent again.
+* That premise is also why there is no `3xx` arm at all. `resp.status` is the
+  *final* response's status, never a redirect's, and no caller can supply a
+  `Location` - so a redirect arm here would be code no production path could
+  reach, and the exact seam a re-added redirect-declining client would plug
+  into. `tests/test_browser.py::test_the_injected_fetch_follows_redirects`
+  fails the moment the injected script stops following them.
+* A failed write is classified, never silently retried. What survives of that
+  rule in this module is `_throttle_retryable`: a throttled *write* is never
+  reported `retryable`, because `post create` carries no dedupe token and a
+  second post to a real audience cannot be recalled.
 * Nothing LinkedIn sends back is printable as it arrived. A response body is
   scrubbed before it is spliced into an error, and `retryable` is answered from
   the request method rather than the status alone - see `scrub_secrets` and
@@ -37,34 +33,15 @@ The rules that matter most, all learned the hard way against the live API:
 
 from __future__ import annotations
 
-import gzip
 import json
 import re
-import socket
-import ssl
-import time
-import urllib.error
 import urllib.parse
-import urllib.request
-import zlib
-from collections.abc import Callable
-from http.cookies import SimpleCookie
 
 BASE = "https://www.linkedin.com/voyager/api/"
 
 # The one path on linkedin.com that is known never to serve HTML, which is what
 # lets an HTML body under it be classified instead of merely reported.
 API_PATH = urllib.parse.urlsplit(BASE).path
-
-# The only cookies that may enter the Cookie header. See module docstring.
-ESSENTIAL_COOKIES = ("li_at", "JSESSIONID", "liap", "lidc", "bcookie", "bscookie")
-
-USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-)
-
-REDIRECT_CODES = frozenset({301, 302, 303, 307, 308})
 
 # LinkedIn parks a flagged session behind one of these before it starts
 # answering with 999.
@@ -103,11 +80,6 @@ SAFE_PREVIEW_HEADERS = frozenset(
         "x-restli-protocol-version",
     }
 )
-
-# Failures that happen before the request is written: DNS never resolved, the
-# TCP handshake was refused, or the certificate was rejected during the
-# handshake. Nothing reached LinkedIn, so even a POST may be sent again.
-NEVER_SENT = (ConnectionRefusedError, socket.gaierror, ssl.SSLCertVerificationError)
 
 # Methods whose repetition is not a second event on the account. Everything else
 # is treated as a write; see `_throttle_retryable`.
@@ -238,25 +210,12 @@ class Blocked(VoyagerError):
     exit_code = 9
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Surface redirects to us instead of following them blindly."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-def _never_sent(exc: BaseException) -> bool:
-    """True when the failure provably predates the first byte of the request."""
-    reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
-    return isinstance(reason, NEVER_SENT)
-
-
 # ----------------------------------------------------------------- classification
 #
 # Module-level, not methods: the browser transport issues its requests from
-# inside a page and holds no client object, so a taxonomy that lived on
-# `VoyagerClient` would be copied over there and the copy would answer a
-# different exit code within a release of being written.
+# inside a page and holds no client object, so a taxonomy that lived on a client
+# would have been copied over there, and the copy would answer a different exit
+# code within a release of being written.
 
 
 def classify_url(url: str | None) -> type[VoyagerError] | None:
@@ -280,9 +239,9 @@ def classify_url(url: str | None) -> type[VoyagerError] | None:
 def _classified(verdict: type[VoyagerError], where: str) -> VoyagerError:
     """The operator-facing form of a `classify_url` verdict.
 
-    `where` is scrubbed for exactly the reason the unclassified redirect below
-    is - its query string is LinkedIn's to fill - and this is the branch that
-    actually carries a credential: a checkpoint URL echoes the csrf token back
+    `where` is scrubbed for exactly the reason a response body is - its query
+    string is LinkedIn's to fill - and this is the branch that actually
+    carries a credential: a checkpoint URL echoes the csrf token back
     as `?ct=`, and a login shell carries the member id in its own tracking
     parameters. Both verdicts are reached from `final_url` on the transport
     `cli` holds, so this is the common path rather than a corner of it, and
@@ -306,14 +265,14 @@ def raise_for_status(
     status: int,
     payload: bytes,
     url: str,
-    location: str | None = None,
     final_url: str | None = None,
     method: str | None = None,
 ) -> None:
     """Turn a response into the one exception that names what to do about it.
 
-    `location` is only ever set by a transport that declines redirects;
-    `final_url` by one that follows them and can say where the body came from.
+    `final_url` is where the body actually came from, and it is the only URL
+    signal there is: the one transport in this package follows redirects, so
+    `status` is the final response's and no caller can hand over a `Location`.
     `method` decides only whether a throttle is reported retryable, and a caller
     that omits it is answered conservatively - see `_throttle_retryable`.
     """
@@ -327,14 +286,6 @@ def raise_for_status(
     verdict = classify_url(landed)
     if verdict is not None:
         raise _classified(verdict, landed)
-
-    if status in REDIRECT_CODES:
-        verdict = classify_url(location)
-        if verdict is not None:
-            raise _classified(verdict, location or "")
-        # Scrubbed like a body: an unclassified redirect is LinkedIn sending us
-        # somewhere we do not recognise, and its query string is theirs to fill.
-        raise UpstreamError(f"unexpected redirect to {scrub_secrets(str(location))}")
 
     if status in (401, 403):
         raise SessionExpired(f"LinkedIn rejected the session ({status}). Run `linkedin auth seed`.")
@@ -415,226 +366,3 @@ def parse(payload: bytes, headers, url: str):
             "login or interstitial page rather than an API response - run "
             "`linkedin auth seed`."
         ) from exc
-
-
-class VoyagerClient:
-    def __init__(
-        self,
-        cookies: dict[str, str],
-        *,
-        opener=None,
-        rate: float = 1.0,
-        state=None,
-        timeout: int = 30,
-        max_retries: int = 3,
-        user_agent: str = USER_AGENT,
-        on_cookies_changed: Callable[[dict[str, str]], None] | None = None,
-        verbose: bool = False,
-    ):
-        self.cookies = dict(cookies)
-        self.timeout = timeout
-        self.max_retries = max_retries
-        self.user_agent = user_agent
-        self.verbose = verbose
-        self._min_interval = (1.0 / rate) if rate else 0.0
-        self._state = state
-        self._on_cookies_changed = on_cookies_changed
-        self._opener = opener or urllib.request.build_opener(_NoRedirect)
-
-    # ------------------------------------------------------------------ helpers
-
-    def _cookie_header(self) -> str:
-        return "; ".join(
-            f"{name}={self.cookies[name]}" for name in ESSENTIAL_COOKIES if name in self.cookies
-        )
-
-    def _csrf(self) -> str:
-        return self.cookies.get("JSESSIONID", "").strip('"')
-
-    def _headers(self, extra: dict | None = None) -> dict[str, str]:
-        h = {
-            "Cookie": self._cookie_header(),
-            "csrf-token": self._csrf(),
-            "accept": "application/vnd.linkedin.normalized+json+2.1",
-            "x-restli-protocol-version": "2.0.0",
-            "user-agent": self.user_agent,
-            "accept-language": "en-US,en;q=0.9",
-            "accept-encoding": "gzip, deflate",
-            "x-li-lang": "en_US",
-            "referer": "https://www.linkedin.com/feed/",
-        }
-        if extra:
-            h.update(extra)
-        return h
-
-    def _pace(self) -> None:
-        if not self._min_interval:
-            return
-        if self._state is None:
-            # Imported lazily so a client with pacing off never opens the state
-            # file, and so a caller can inject its own pacer instead.
-            from .state import State
-
-            self._state = State()
-        self._state.wait_for_slot(self._min_interval)
-
-    def _absorb_cookies(self, headers) -> bool:
-        """Ingest `Set-Cookie`; report whether a cookie we send actually changed.
-
-        Each header gets its own jar: `.get()` returns one header and drops the
-        rest, and joining the values on ',' mis-parses any `Expires` date.
-        """
-        if hasattr(headers, "get_all"):
-            raw = headers.get_all("Set-Cookie") or []
-        else:
-            one = headers.get("Set-Cookie")
-            raw = [one] if one else []
-
-        rotated = False
-        for header in raw:
-            jar = SimpleCookie()
-            try:
-                jar.load(header)
-            except Exception:
-                continue
-            for name, morsel in jar.items():
-                # `coded_value`, not `value`: SimpleCookie unquotes, and
-                # JSESSIONID's surrounding quotes are part of what LinkedIn
-                # expects back in the Cookie header.
-                fresh = morsel.coded_value
-                if name in ESSENTIAL_COOKIES and self.cookies.get(name) != fresh:
-                    rotated = True
-                self.cookies[name] = fresh
-
-        if rotated and self._on_cookies_changed:
-            self._on_cookies_changed(dict(self.cookies))
-        return rotated
-
-    @staticmethod
-    def _decode(body: bytes, headers) -> bytes:
-        """Decompress, tolerating a truncated body so the status still reports."""
-        enc = (headers.get("Content-Encoding") or "").lower()
-        try:
-            if "gzip" in enc:
-                return gzip.decompress(body)
-            if "deflate" in enc:
-                return zlib.decompress(body)
-        except (OSError, EOFError, zlib.error):
-            return body
-        return body
-
-    @staticmethod
-    def _is_self_redirect(status: int, url: str, location: str | None) -> bool:
-        if status not in REDIRECT_CODES or not location:
-            return False
-        return location.rstrip("/") == url.rstrip("/")
-
-    # ------------------------------------------------------------------ errors
-    #
-    # Both shims exist only so `browser.py` can keep calling them unbound while
-    # it is repointed at the module-level functions; neither adds behaviour.
-
-    def _raise_for_status(
-        self,
-        status: int,
-        body: bytes,
-        url: str,
-        location: str | None = None,
-        final_url: str | None = None,
-        method: str | None = None,
-    ) -> None:
-        raise_for_status(status, body, url, location, final_url, method)
-
-    @staticmethod
-    def _parse(payload: bytes, headers, url: str):
-        return parse(payload, headers, url)
-
-    # ------------------------------------------------------------------ request
-
-    def _request(self, method: str, path: str, body: dict | None, dry_run: bool):
-        url = path if path.startswith("http") else BASE + path
-        extra = {"content-type": "application/json; charset=UTF-8"} if body is not None else None
-
-        if dry_run:
-            safe = {
-                name: (value if name.lower() in SAFE_PREVIEW_HEADERS else REDACTED)
-                for name, value in self._headers(extra).items()
-            }
-            return {"method": method, "url": url, "headers": safe, "body": body}
-
-        data = json.dumps(body).encode() if body is not None else None
-        attempt = 0
-        redirect_retried = False
-
-        while True:
-            self._pace()
-            # Headers are rebuilt per attempt: a Set-Cookie we just absorbed
-            # changes both the Cookie header and the csrf token derived from it.
-            req = urllib.request.Request(
-                url, data=data, headers=self._headers(extra), method=method
-            )
-            try:
-                with self._opener.open(req, timeout=self.timeout) as resp:
-                    status = getattr(resp, "status", 200)
-                    raw = resp.read()
-                    resp_headers = resp.headers
-            except urllib.error.HTTPError as exc:
-                # With redirects disabled urllib surfaces even a 302 this way.
-                status, raw, resp_headers = exc.code, exc.read(), exc.headers
-            except (urllib.error.URLError, TimeoutError, ConnectionError, ssl.SSLError) as exc:
-                if _never_sent(exc):
-                    if attempt >= self.max_retries:
-                        raise UpstreamError(
-                            f"could not connect to LinkedIn: {exc}. The request never "
-                            "reached LinkedIn, so nothing was applied."
-                        ) from exc
-                elif method != "GET":
-                    raise OutcomeUnknown(
-                        f"the connection failed after the request was sent: {exc}. LinkedIn "
-                        "may or may not have applied this write - check on LinkedIn before "
-                        "retrying, because a blind retry can duplicate it."
-                    ) from exc
-                elif attempt >= self.max_retries:
-                    raise UpstreamError(f"connection to LinkedIn failed: {exc}") from exc
-                attempt += 1
-                time.sleep(min(2**attempt, 30))
-                continue
-
-            rotated = self._absorb_cookies(resp_headers)
-            payload = self._decode(raw, resp_headers)
-            location = resp_headers.get("Location")
-
-            if self._is_self_redirect(status, url, location):
-                # Cookies arrived with the redirect, so the first attempt simply
-                # went out without them. One retry separates that from a session
-                # that is genuinely dead.
-                if rotated and not redirect_retried:
-                    redirect_retried = True
-                    continue
-                raise SessionExpired(
-                    "LinkedIn redirected the request to itself"
-                    + (" twice" if redirect_retried else "")
-                    + ", which means the session cookies are stale. Run "
-                    "`linkedin auth seed` to refresh them."
-                )
-
-            try:
-                raise_for_status(status, payload, url, location, method=method)
-            except RateLimited as rl:
-                # One decision, not two. This used to keep its own `method ==
-                # "GET"` copy of the same rule alongside `rl.retryable`; now
-                # that the exception answers from the method, a second copy here
-                # is just somewhere for the two to disagree later.
-                if not rl.retryable or attempt >= self.max_retries:
-                    raise
-                attempt += 1
-                time.sleep(min(2**attempt, 30))
-                continue
-
-            return parse(payload, resp_headers, url)
-
-    def get(self, path: str, dry_run: bool = False):
-        return self._request("GET", path, None, dry_run)
-
-    def post(self, path: str, body: dict, dry_run: bool = False):
-        return self._request("POST", path, body, dry_run)

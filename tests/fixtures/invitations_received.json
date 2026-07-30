@@ -1,5 +1,4 @@
 {
-  "_synthetic": "The one fixture in this directory whose *structure* was transcribed from a live read of `relationships/invitationViews?q=receivedInvitation` rather than written from the shape of one - the projection had been guessed before any populated inbox existed to read, and every guess was wrong. Every identity in it is invented: both members, every urn, the public ids, the shared secret and the timestamp. Four properties are the reason it exists and must survive any edit: the list is `*elements` holding *references* and the entities are in `included`; the chain is three hops, InvitationView --*invitation--> Invitation --*fromMember--> MiniProfile; the invitation is named by `mailboxItemId` (`urn:li:invitation:`), not by `entityUrn` (`urn:li:fs_relInvitation:`); and `paging.total` is 0 while `*elements` carries a row, which LinkedIn really does answer and which is why the cursor is computed from what was returned. One real invitation is the whole sample - see `surfaces/invitations.py::list_received` for why the fail-loud parsing stays anyway.",
   "data": {
     "$type": "com.linkedin.restli.common.CollectionResponse",
     "*elements": [

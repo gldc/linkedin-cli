@@ -29,20 +29,35 @@ with no field-level explanation:
 
 - **`trackingId` is 16 raw bytes carried as a string**, not base64. In Python:
   `os.urandom(16).decode("latin-1")`.
-- **`originToken` is required** and is a UUID4. It is **not** a dedupe key, and an
-  earlier revision of this file said it was. The same captured body three lines
-  above sends `"dedupeByClientGeneratedToken": false` — the server is being told
-  explicitly *not* to collapse repeats of the client's token — so two calls
-  carrying one `--idempotency-key` are two messages in the thread, and this CLI
-  has no verb that unsends either of them. The claim was an inference contradicted
-  by a field in the very payload it was written under, which is why the capture
-  wins and the prose was corrected rather than the body.
+- **`originToken` is required** and is a UUID4. It is **not** a server-side dedupe
+  key, and an earlier revision of this file said it was. The same captured body
+  three lines above sends `"dedupeByClientGeneratedToken": false` — the server is
+  being told explicitly *not* to collapse repeats of the client's token. That was
+  an inference contradicted by a field in the very payload it was written under,
+  which is why the capture wins and the prose was corrected rather than the body.
+  The field is still sent exactly as captured; nobody has tried `true`, and the
+  experiment that would license flipping it needs the real session on the
+  deployment host.
 
-  What `--idempotency-key` actually buys is **traceability**: it pins
-  `originToken` to a caller-chosen value instead of the uuid4 that would otherwise
-  be generated, so a send can be correlated afterwards. It buys nothing about
-  safety, there is no client-side dedupe either, and a send whose answer was lost
-  is resolved by reading the thread back — never by repeating it.
+  **What the CLI does with the token.** `originToken` is no longer a fresh uuid4
+  per call: it is `sha256` of `(namespace, mailbox urn, conversation urn, text)`,
+  cast to a uuid4-shaped UUID. So a retry of the same reply is byte-identical to
+  the first attempt in everything but `trackingId`. That is traceability on the
+  wire and nothing more — the server was told not to use it.
+
+  **Where the actual protection lives.** Not in this payload. `cli._send_into`
+  reads the thread page that `confirm_reply_target` already fetches before every
+  send, and refuses to post a reply it can see this account already sent with
+  that exact text; the envelope reports `data.deduped`. It is best effort by
+  construction — one page of the newest messages, exact text match, and it cannot
+  see a write that landed a moment ago and has not appeared yet — so an
+  unconfirmed send is still resolved by reading the thread back rather than by
+  assuming a repeat is free.
+
+  **`--idempotency-key` overrides the derived token and turns that check off.**
+  That is its point: it is the one way to put the same text into the same thread
+  twice on purpose. The credential broker does not expose the flag, so an agent
+  cannot reach it.
 - **`conversationUrn` is required even for a "new" conversation.** The web client
   resolves or creates the conversation first and only then sends, so a
   `hostRecipientUrns`-style payload is not what the current API accepts.

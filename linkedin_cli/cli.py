@@ -54,8 +54,8 @@ USAGE = """linkedin - drive LinkedIn from the shell
   linkedin messages list [--unread-only] [--count=N] [--cursor=C]
   linkedin messages read <conversation-urn> [--count=N] [--cursor=C]
   linkedin messages counts
-  linkedin messages send --to=<urn|url> --text=... [--conversation=<urn>]
-  linkedin messages reply <conversation-urn> --text=...
+  linkedin messages send (--to=<urn|url> | --conversation=<urn>) --text=...
+  linkedin messages reply <conversation-urn> --text=...  (reads the thread first)
   linkedin messages mark-all-read --yes        (marks the WHOLE mailbox seen)
 
   linkedin invite <public-id-or-url>           (a connection request; no undo)
@@ -81,11 +81,14 @@ Global: --format=json|text (default json) --raw --dry-run --rate=N --help
   --raw                  prints the upstream payload instead of the envelope,
                          and on a failure carries the response body inside
                          error.body - redacted, without changing the exit code
-  --idempotency-key=K    read by messages send and messages reply, where it sets
-                         the originToken. It buys traceability, NOT safety: the
-                         captured body sends dedupeByClientGeneratedToken=false,
-                         so the same key twice is a second message in the thread.
-                         post create refuses the flag outright
+  --idempotency-key=K    read by messages send and messages reply, where it
+                         overrides the originToken those verbs derive from the
+                         thread and the text. It is the escape hatch, not the
+                         safety net: it turns the repeat check off, so it is how
+                         you deliberately put a second message carrying the same
+                         text into the same thread. Leave it off and an identical
+                         re-run is checked against the newest page of the thread
+                         before anything is sent. post create refuses it outright
   --note=...             refused by invite - the captured payload has no field
                          for a note, and one is not invented for you
   --verbose              accepted and ignored - nothing in this CLI reads it
@@ -95,7 +98,10 @@ Exit: 0 ok | 2 usage | 3 auth | 4 not found | 5 throttled | 6 upstream
       No exit code means "retry": error.retryable in the envelope is the only
       thing that says so. Exit 6 covers both a request that never landed and a
       write that may already have - a send reported as unconfirmed is the second
-      kind, and repeating it puts a second message in the thread with no unsend.
+      kind. Read the thread back first; an identical re-run is checked against
+      the newest page of it and will not send a copy of a reply it can see
+      there, but it cannot see one that has not appeared yet, so re-run once and
+      not in a loop. There is no unsend.
 """
 
 BOOLEAN_FLAGS = {
@@ -640,14 +646,17 @@ def cmd_post(ctx: Context):
     # accepts are enumerated.
     seen_by = posts.audience(ctx.flag("visibility"))
     if ctx.flag("idempotency-key"):
-        # Refused because the share payload has no field to put a key in at all.
-        # This used to be justified by contrast - `messages send` "honours this
-        # because `createMessage` carries an `originToken` LinkedIn de-duplicates
-        # on" - and that contrast was false: the captured messaging body sends
-        # `"dedupeByClientGeneratedToken": false` (docs/write-payloads.md), so
-        # LinkedIn is told not to dedupe on the token. The refusal here is right
-        # either way, and arguably more so: there is no idempotent write in this
-        # CLI, and the caller passing this flag is the one that intends to retry.
+        # Refused because the share payload has no field to put a key in at all
+        # (docs/write-payloads.md), and nothing in a share is derived from the
+        # text either - so there is nothing here to recognise a repeat by.
+        #
+        # The contrast with `messages reply` now runs the other way, and it is
+        # worth stating because it has been written backwards twice. A reply is
+        # checked against the newest page of its own thread before it is sent, so
+        # an identical re-run usually costs nothing; a post has no equivalent,
+        # because a share carries no thread to read back and no token to match.
+        # The caller reaching for this flag is the one that intends to retry, and
+        # on this verb a retry is a second public post.
         raise UsageError(
             "`post create` cannot honour --idempotency-key: the captured payload carries "
             "no dedupe token, so LinkedIn has no way to recognise a repeat and a second "
@@ -736,28 +745,40 @@ def cmd_messages(ctx: Context):
         return _write(ctx, "message", lambda: messaging.mark_all_read(ctx.client, dry_run=dry_run))
 
     if action == "reply":
-        conversation = ctx.arg(1, "conversation-urn")
-        text = ctx.require("text")
-        return _write(
-            ctx,
-            "message",
-            lambda: messaging.send_message(
-                ctx.client,
-                ctx.member_urn,
-                conversation,
-                text,
-                idempotency_key=ctx.flag("idempotency-key"),
-                dry_run=bool(ctx.flag("dry-run")),
-            ),
-        )
+        return _send_into(ctx, ctx.arg(1, "conversation-urn"), ctx.require("text"))
 
-    # `send` needs a conversation to exist first: LinkedIn requires a
-    # conversationUrn even for a brand-new thread, so an existing thread with the
-    # recipient is looked up before falling back to an explicit --conversation.
-    recipient = ctx.require("to")
+    # `send` names its destination exactly one of two ways, and never both.
+    #
+    # `--to` used to be read only inside `if not conversation:`, so passing both
+    # made the recipient dead code: the message went wherever the urn said and
+    # the flag naming a human contributed nothing but the appearance of having
+    # been checked. Reconciling them is not available cheaply or reliably -
+    # `find_conversation_with` scans forty threads and answers `None` past that,
+    # so a real thread beyond the scan would read as a disagreement - and
+    # silently preferring one is what shipped. Refused instead, on this repo's
+    # standing rule: a flag this CLI would drop is a flag it says no to.
     text = ctx.require("text")
     conversation = ctx.flag("conversation")
+    recipient = ctx.flag("to")
+
+    if conversation and recipient:
+        raise UsageError(
+            "--to and --conversation both name where this message goes, and nothing here can "
+            "check them against each other: the conversation urn decides the destination on "
+            "its own and the recipient would be dropped. Pass --conversation=<urn> for a "
+            "thread you already have - `linkedin messages reply <urn>` is the same send - or "
+            "--to=<urn|profile-url> to have the thread with that member looked up."
+        )
+    if not conversation and not recipient:
+        raise UsageError(
+            "--to=<urn|profile-url> or --conversation=<urn> is required: one names the member "
+            "whose thread should be looked up, the other names the thread."
+        )
+
     if not conversation:
+        # LinkedIn requires a conversationUrn even for a brand-new thread, so an
+        # existing thread with the recipient is looked up before there is
+        # anything to send into.
         if ctx.flag("dry-run"):
             # Two requests stand between here and the send, and a preview that
             # issued them would not be a preview. Inventing a conversation urn
@@ -765,8 +786,8 @@ def cmd_messages(ctx: Context):
             # not the one that would go out.
             raise UsageError(
                 f"a dry run issues no requests, so it cannot look up the thread with "
-                f"{recipient!r}. Pass --conversation=<urn> to preview the exact body, or "
-                "drop --dry-run."
+                f"{recipient!r}. Drop --to and pass --conversation=<urn> to preview the exact "
+                "body, or drop --dry-run."
             )
         # `resolve_urn` raises rather than answering `None` for a recipient it
         # could not identify, so an unresolvable `--to` now exits 2 from the
@@ -778,24 +799,102 @@ def cmd_messages(ctx: Context):
         conversation = messaging.find_conversation_with(
             ctx.client, ctx.member_urn, profile.resolve_urn(ctx.client, recipient)
         )
-    if not conversation:
-        raise UsageError(
-            f"no existing conversation with {recipient!r}. LinkedIn requires a "
-            "conversationUrn even for a new thread; open the thread once in the "
-            "browser, or pass --conversation=<urn>."
-        )
-    return _write(
-        ctx,
-        "message",
-        lambda: messaging.send_message(
+        if not conversation:
+            raise UsageError(
+                f"no existing conversation with {recipient!r}. LinkedIn requires a "
+                "conversationUrn even for a new thread; open the thread once in the "
+                "browser, or pass --conversation=<urn> without --to."
+            )
+
+    return _send_into(ctx, conversation, text)
+
+
+def _send_into(ctx: Context, conversation: str, text: str):
+    """The one path from this CLI into `messaging.send_message`.
+
+    One function rather than a call in each branch, and that is the fix and not a
+    tidy-up. `reply <urn>` and `send --conversation=<urn>` built the
+    byte-identical createMessage body from two branches of `cmd_messages`; the
+    membership guard was added to the branch that was being looked at, and the
+    other one stayed open - `send --to=<mine> --conversation=<stranger-thread>`
+    exited 0 with the message delivered into somebody else's thread. Two call
+    sites are two guards to keep in step, and this project has lost that bet
+    three times. One call site cannot drift from itself, and a test pins that
+    there is only one.
+
+    The thread is read before it is written into. `send_message` puts the urn
+    straight in the createMessage body with no lookup of any kind, so this is the
+    only thing on the path that ties a message to a conversation the account can
+    actually read, and to this account's own mailbox. The surface's
+    `confirm_reply_target` states exactly what that establishes and what it does
+    not: read access and the mailbox, not a participant list.
+
+    Inside the claim rather than in front of it: the cap is a local file and this
+    is a live round trip, so an agent that has spent its budget is refused
+    without paying for the answer.
+
+    **The same page decides whether to send at all.** `already_sent` reads the
+    answer the membership check already paid for, and a reply this account can
+    see it already sent - identical thread, identical text - is reported back
+    with `deduped: true` instead of posted a second time. Best effort by
+    construction: the window is one page and the read-back cannot see a write
+    that has not appeared yet, which is why `_unconfirmed` still reports
+    `retryable: False`.
+
+    **A dedupe settles its claim rather than releasing it**, and that is a
+    deliberate inversion of what "nothing was posted" used to mean here. It is
+    not free: it issues the live, browser-driven GET below, against the
+    operator's account, and the caps exist to pace exactly that kind of traffic.
+    Refunding it would mean an identical-text loop could never reach
+    `DAILY_CAPS["message"]`, so the pre-round-trip refusal two paragraphs up
+    would never fire on this verb again. So `ctx.attempted_write` is set here,
+    and `_WriteWatch.post` is no longer the only thing that sets it.
+
+    `--idempotency-key` skips the check. It overrides the derived `originToken`
+    and is the one way to put the same text into the same thread twice on
+    purpose; the broker does not expose the flag, so this hatch is the operator's
+    and not an agent's.
+
+    Skipped under `--dry-run`, and both halves matter: a read there is
+    intercepted by `_WriteWatch.get` and returned as a preview of *itself*, which
+    would replace the body the operator is previewing - and a dry run sends
+    nothing, so there is no message to confine.
+
+    The mailbox is resolved first and passed to both, rather than read twice: it
+    is the thing the answer is compared against, and it is cached in the ledger
+    after the first invocation ever, so ordering it ahead of the read costs
+    nothing on any run but the first.
+    """
+
+    def send():
+        mailbox = ctx.member_urn
+        dry_run = bool(ctx.flag("dry-run"))
+        key = ctx.flag("idempotency-key")
+        if not dry_run:
+            graph, entities = messaging.confirm_reply_target(ctx.client, conversation, mailbox)
+            found = None if key else messaging.already_sent(graph, entities, mailbox, text)
+            if found:
+                # The GET was live and the cap paces live traffic, so the claim
+                # is settled rather than handed back - see the docstring.
+                ctx.attempted_write = True
+                return {
+                    "message_urn": found,
+                    "conversation_urn": conversation,
+                    "deduped": True,
+                }
+        sent = messaging.send_message(
             ctx.client,
-            ctx.member_urn,
+            mailbox,
             conversation,
             text,
-            idempotency_key=ctx.flag("idempotency-key"),
-            dry_run=bool(ctx.flag("dry-run")),
-        ),
-    )
+            idempotency_key=key,
+            dry_run=dry_run,
+        )
+        # A dry run's answer is the previewed request itself; adding a field to
+        # it would show the operator a body that is not the one that goes out.
+        return sent if dry_run else sent | {"deduped": False}
+
+    return _write(ctx, "message", send)
 
 
 def cmd_react(ctx: Context):
@@ -947,11 +1046,18 @@ def _write(ctx: Context, kind: str, write: Callable[[], Any], *, cleanup: bool =
     Three details carry the weight:
 
     * The slot is *claimed before* the request and given back only if nothing
-      was sent. `ctx.attempted_write` is what `_WriteWatch` sets when a POST is
-      really issued, so an argument this CLI rejects locally - a share urn where
-      an activity urn was needed - costs nothing, while a write whose response
-      proved nothing still counts. LinkedIn may well have applied that one, and
-      the cap is on what this client *sends*, not on what it can confirm.
+      was sent. `ctx.attempted_write` is the flag that decides which, so an
+      argument this CLI rejects locally - a share urn where an activity urn was
+      needed - costs nothing, while a write whose response proved nothing still
+      counts. LinkedIn may well have applied that one, and the cap is on what
+      this client *sends*, not on what it can confirm.
+
+      `_WriteWatch.post` sets that flag when a POST is really issued, and it is
+      **not the only thing that does**: `_send_into` sets it on a deduped reply,
+      which issues a live thread read and posts nothing. So the flag means "this
+      invocation touched LinkedIn in a way the cap exists to pace", not "a POST
+      went out" - a refactor that reads it as the latter is wrong, and
+      `test_a_deduped_reply_still_spends_a_write_slot` is what pins it.
     * `--dry-run` neither claims a slot nor spends one. Nothing is issued, so
       there is nothing to charge for - and refusing to *preview* a write because
       the day's budget is gone would take away the one command that costs
@@ -1126,7 +1232,7 @@ def cmd_doctor(ctx: Context):
         )
 
     return {
-        "browser": _safe(lambda: supervisor.request({"op": "status"}, autostart=False)),
+        "browser": _safe(_browser_status),
         "breaker": ledger.breaker_state(),
         # Reported, never spent and never cleared. Until this existed the counts
         # were readable only by opening `state.json` on the host, so the only way
@@ -1165,6 +1271,20 @@ def cmd_doctor(ctx: Context):
         },
         "decoration_id_recipe": DECORATION_ID_RECIPE,
     }
+
+
+def _browser_status():
+    """The resident supervisor's `status`, and no browser started to get it.
+
+    Reported as it arrives. `page_url` used to be cut back to its path here -
+    the query string of a checkpoint URL carries the csrf token as `?ct=`, which
+    *is* the JSESSIONID cookie value - and that reduction now happens in the
+    daemon (`supervisor._reported_page_url`), which is where it covers the other
+    consumer too: `browser.py` returns the same dict verbatim as a `--dry-run`
+    preview's `runs_in`, and that path never came through here. Two layers doing
+    one job is how only one of them got fixed.
+    """
+    return supervisor.request({"op": "status"}, autostart=False)
 
 
 def _safe(thunk):

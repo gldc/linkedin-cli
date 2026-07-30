@@ -1,7 +1,7 @@
 """Sending a connection request: the one write that reaches a named stranger.
 
-The request body is a transcription of traffic captured by driving
-the real "Connect" control, pausing the request with CDP `Fetch` at
+The request body is a transcription of traffic captured by driving the real
+"Connect" control, pausing the request with CDP `Fetch` at
 `requestStage: Request`, recording `request.postData` and then **aborting** it -
 the sent-invitations list read 9 before and 9 after, and the target was absent.
 So the shape tests below compare the serialized body against the captured bytes
@@ -442,8 +442,8 @@ def test_a_dry_run_is_not_held_to_a_postcondition():
 
 # ------------------------------------------------------ listing what was received
 
-# The route verified live (docs/sdui-migration.md): a GET, probed
-# alongside eight other spellings of which seven answered 404 or 400. It answered
+# The route verified live (docs/sdui-migration.md): a GET, probed alongside
+# eight other spellings of which seven answered 404 or 400. It answered
 # 200 with `data.elements` and `data.paging`, and `relationships/invitationsSummary`
 # independently reported `numPendingInvitations: 0` while the page rendered
 # `All (0)` - three reads agreeing, which is what makes this a verified route
@@ -463,10 +463,10 @@ INVITATION_URN = "urn:li:invitation:7000000000000000002"
 VIEW_URN = "urn:li:fs_relInvitationView:7000000000000000002"
 REL_URN = "urn:li:fs_relInvitation:7000000000000000002"
 
-# The REAL normalized shape, observed live against the first
-# populated received inbox this route was ever pointed at. It is not flat: the
-# collection holds *references* in `*elements` and the entities live in
-# `included`, three hops deep -
+# The REAL normalized shape, observed live against the first populated received
+# inbox this route was ever pointed at. It is not flat: the collection holds
+# *references* in `*elements` and the entities live in `included`, three hops
+# deep -
 #
 #     InvitationView --*invitation--> Invitation --*fromMember--> MiniProfile
 #
@@ -549,8 +549,8 @@ class ReadClient:
 
 def test_the_received_route_is_the_one_that_was_verified_live():
     """Byte for byte, including the parameter order the probe used. A finder is
-    not guessable: seven of the sent-side spellings tried answered 404
-    or 400, and the two that answered are the only two known to exist."""
+    not guessable: seven of the nine spellings tried answered 404 or 400, and the
+    two that answered are the only two known to exist."""
     client = ReadClient()
     invitations.list_received(client, count=10)
     assert client.paths == ["relationships/invitationViews?count=10&q=receivedInvitation&start=0"]
@@ -720,10 +720,10 @@ def test_the_missing_withdraw_no_longer_blames_an_uncaptured_payload():
 
 
 def test_the_missing_sent_list_says_no_route_survives_rather_than_none_was_seen():
-    """Seven spellings were probed: three 404, four 400. There is
-    nothing left to capture, and a message implying otherwise sends the reader
-    on a capture run that cannot succeed - which is how the last two of those
-    cost a stranger's invitation each."""
+    """Seven spellings were probed: three 404, four 400. There is nothing left to
+    capture, and a message implying otherwise sends the reader on a capture run
+    that cannot succeed - which is how the last two of those cost a stranger's
+    invitation each."""
     message = invitations.NO_SENT_LIST
     assert "docs/sdui-migration.md" in message
     assert "never captured" not in message
@@ -745,10 +745,11 @@ def test_the_urn_refusals_no_longer_promise_a_capture_would_bring_the_undo_back(
 # refusal that arrives inside a **200** never reaches it: `_confirm_sent` reads
 # the body itself and hands what it finds to `_quota` and `_unconfirmed`.
 # `cli._report` renders those exceptions' `str()` into `error.message`, and under
-# an agent gateway stderr is permanent model context - so a csrf token quoted back inside a
-# refusal is a live session nobody can retract. render.py's docstring claims
-# nothing reaching an envelope is unredacted "by construction rather than by the
-# caller remembering"; this surface is where that stopped being true.
+# an agent gateway, stderr is permanent model context - so a csrf token quoted
+# back inside a refusal is a live session nobody can retract. render.py's
+# docstring claims nothing reaching an envelope is unredacted "by construction
+# rather than by the caller remembering"; this surface is where that stopped
+# being true.
 #
 # `_quota_sign_in` makes it worse than the `errors`-array case. It walks up to
 # six levels of an arbitrary 200 body and returns the *first string it likes the
@@ -886,9 +887,10 @@ def test_a_transport_scrubbed_quota_refusal_is_not_mangled_by_a_second_pass():
 
 def test_a_refused_invitation_reaches_stderr_scrubbed_through_the_cli():
     """End to end, because the leak is only a leak once `cli._report` has written
-    it: `str(exc)` becomes `error.message`, and under an agent gateway that stream is
-    permanent model context. `--raw` is off on purpose - `render.scrub_body`
-    already covers `error.body`, and the message is the field that did not."""
+    it: `str(exc)` becomes `error.message`, and under an agent gateway, that
+    stream is permanent model context. `--raw` is off on purpose -
+    `render.scrub_body` already covers `error.body`, and the message is the field
+    that did not."""
     errors = [{"message": quota_credential_detail()}]
     code, out, err = run(["invite", TARGET], client=CliClient({"data": {"errors": errors}}))
     assert code == 5, err
@@ -906,11 +908,11 @@ def test_a_refused_invitation_reaches_stderr_scrubbed_through_the_cli():
 def test_the_recorded_shape_from_a_real_inbox_still_projects():
     """`tests/fixtures/invitations_received.json` is the answer LinkedIn gave.
 
-    Structure verbatim from a live read, identities replaced. The
-    inline builders above are convenient and are also written by the same person
-    who wrote the parser, which is how this surface shipped a projection that
-    could not read a single real invitation: the route had only ever been seen
-    against an empty inbox, and every test agreed with the guess.
+    Structure verbatim from a live read, identities replaced. The inline builders
+    above are convenient and are also written by the same person who wrote the
+    parser, which is how this surface shipped a projection that could not read a
+    single real invitation: the route had only ever been seen against an empty
+    inbox, and every test agreed with the guess.
 
     So this one is pinned to a file that was not invented - three reference hops,
     `*elements` rather than `elements`, `mailboxItemId` rather than `entityUrn` -

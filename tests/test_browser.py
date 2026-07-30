@@ -206,11 +206,13 @@ def test_the_module_holds_no_credential_and_no_launcher():
     assert "Popen" not in code
     assert "subprocess" not in code
     # Pinned by name rather than counted: `request` is the one seam that leaves
-    # this process, and everything else here has to be inert - a name, or an
-    # environment read - so a new one appearing is a decision, not an accident.
+    # this process, and everything else here has to be inert - a name, an
+    # environment read, or the exception one of those reads raises - so a new one
+    # appearing is a decision, not an accident.
     assert set(re.findall(r"supervisor\.(\w+)", code)) == {
         "request",
         "requested_profile",
+        "SupervisorError",
         "PROFILE_ENV",
         "DEFAULT_BINARY",
         "DEFAULT_PROFILE",
@@ -280,6 +282,20 @@ def test_the_script_sends_the_page_session_and_nothing_else():
     assert 'credentials: "include"' in browser.SCRIPT
     assert browser.SCRIPT_HEADERS["accept"] == "application/vnd.linkedin.normalized+json+2.1"
     assert browser.SCRIPT_HEADERS["x-restli-protocol-version"] == "2.0.0"
+
+
+def test_the_injected_fetch_follows_redirects():
+    """The premise the taxonomy's redirect arm was deleted on.
+
+    `fetch` defaults to `redirect: "follow"`, so `resp.status` is always the
+    *final* response's and can never be a 3xx: a checkpoint or a login shell
+    arrives as an ordinary 200 whose only tell is `resp.url`, which
+    `browser.py` forwards as `final_url`. That is why `raise_for_status` no
+    longer takes a `location` and no longer classifies 3xx at all. A one-word
+    edit here - `redirect: "manual"` - would silently reintroduce statuses
+    nothing classifies, so this guards the premise rather than the code.
+    """
+    assert re.search(r'["\']?redirect["\']?\s*:', browser.SCRIPT) is None
 
 
 # ----------------------------------------------------------------------- dry run
@@ -489,6 +505,28 @@ def test_a_rejected_session_answers_even_with_no_supervisor_to_ask(monkeypatch):
     assert "/opt/linkedin-cli/profile" in str(exc.value)
 
 
+def test_a_rejected_session_under_a_confined_deployment_is_still_exit_3(monkeypatch):
+    """Building the message must not change the failure it is about.
+
+    `requested_profile()` refuses instead of defaulting under credexec (P4), and
+    it is called from inside the handler for a 401 - so a policy missing that key
+    turned a `SessionExpired` (exit 3) into a `SupervisorError` (exit 6) on the
+    way out. Exit 3 is what the breaker counts, and three of them in an hour is
+    what makes a rotted session degrade loudly instead of an agent looping on it
+    (design §8), so losing the code is the expensive half of this. The refusal is
+    diagnostic here and belongs in the text; it is not the failure."""
+    monkeypatch.setenv(supervisor.DEPLOYMENT_ENV, supervisor.CONFINED_DEPLOYMENT)
+    monkeypatch.delenv(supervisor.PROFILE_ENV, raising=False)
+    c, _ = make(page(status=401, body="nope"), status={"pid": 4242, "profile": "/managed/profile"})
+    with pytest.raises(SessionExpired) as exc:
+        c.get("me")
+    assert exc.value.exit_code == 3
+    message = str(exc.value)
+    assert "/managed/profile" in message, "the profile that answered is the diagnosis"
+    assert supervisor.PROFILE_ENV in message, "so is the key the policy dropped"
+    assert "auth seed" not in message
+
+
 def test_the_status_probe_on_a_rejected_session_starts_no_browser():
     c, daemon = make(page(status=401, body="nope"))
     with pytest.raises(SessionExpired):
@@ -603,8 +641,8 @@ def test_a_challenge_marker_in_an_html_body_is_blocked():
 
 
 def test_the_url_the_response_came_from_is_forwarded_to_the_taxonomy():
-    """`raise_for_status` takes `location` and `final_url` as adjacent optionals
-    that mean opposite things, and only this transport fills the second one."""
+    """`final_url` is the only URL signal `raise_for_status` has left, and this
+    transport is the only thing that fills it."""
     c, _ = make(page(url="https://www.linkedin.com/checkpoint/lg/login-submit"))
     with pytest.raises(Blocked):
         c.get("me")

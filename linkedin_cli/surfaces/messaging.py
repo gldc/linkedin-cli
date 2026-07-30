@@ -21,6 +21,7 @@ to page through 90 KB of profile-picture artifacts to find out who wrote to it.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 import uuid
@@ -29,7 +30,7 @@ from typing import Any
 
 from .. import restli
 from ..graph import Graph
-from ..transport import UpstreamError, scrub_secrets
+from ..transport import NotFound, UpstreamError, scrub_secrets
 
 PATH = "voyagerMessagingGraphQL/graphql?"
 
@@ -93,13 +94,19 @@ def list_conversations(
     return items, next_cursor, has_more
 
 
-def read_conversation(
+def _messages_page(
     client: Any,
     conversation_urn: str,
     count: int = 20,
     cursor: str | None = None,
-) -> tuple[list[dict], str | None, bool]:
-    """Project one page of a single thread."""
+) -> tuple[Graph, list[dict]]:
+    """One page of a thread, as the graph it arrived in and the messages on it.
+
+    Split out for `confirm_reply_target`, which needs the conversation urn
+    LinkedIn answered with and not only the projection - `_message` drops it,
+    because a reader already knows which thread it asked for. One request either
+    way; the two callers differ in what they read out of the same answer.
+    """
     variables: dict[str, Any] = {"conversationUrn": conversation_urn}
     if cursor:
         variables["deliveredAt"] = _epoch(cursor)
@@ -108,7 +115,17 @@ def read_conversation(
 
     graph = Graph(client.get(PATH + restli.query_string(query_id("messages"), variables)))
     root = _root(graph, *MESSAGES_ROOTS)
-    entities = _elements(graph, root, "com.linkedin.messenger.Message")
+    return graph, _elements(graph, root, "com.linkedin.messenger.Message")
+
+
+def read_conversation(
+    client: Any,
+    conversation_urn: str,
+    count: int = 20,
+    cursor: str | None = None,
+) -> tuple[list[dict], str | None, bool]:
+    """Project one page of a single thread."""
+    graph, entities = _messages_page(client, conversation_urn, count, cursor)
 
     items = [_message(graph, entity) for entity in entities]
     next_cursor, has_more = _page(
@@ -260,6 +277,238 @@ CREATE_MESSAGE = "voyagerMessagingDashMessengerMessages?action=createMessage"
 MARK_SEEN = "voyagerMessagingDashMessagingBadge?action=markAllMessagesAsSeen"
 
 
+def confirm_reply_target(
+    client: Any, conversation_urn: str, member_urn: str
+) -> tuple[Graph, list[dict]]:
+    """Refuse a conversation this session cannot read, or that is not in this mailbox.
+
+    `send_message` drops `conversation_urn` into the createMessage body with no
+    lookup at all, and `reply <urn>` builds the byte-identical request that
+    `send --conversation=<urn>` does - so without this, nothing anywhere on the
+    send path establishes that the thread is one this account is in. The caller
+    that matters is an agent that has just read a stranger's DM: telling it to
+    reply "in thread" is exactly the instruction an injected message carries, and
+    every conversation urn it has ever listed is a candidate.
+
+    Both verbs pay for it, through one function in `cli.py` (`_send_into`). They
+    did not at first: this ran on `reply` and `send --conversation=<urn>` posted
+    into whatever mailbox its urn named, which is what "byte-identical request"
+    two paragraphs up had been saying all along.
+
+    **What one answer establishes, precisely.** Two things, from one request:
+
+    * LinkedIn served *this session* at least one message for that urn. That is
+      read access, and nothing more.
+    * Every conversation urn in that answer names `member_urn`'s mailbox, **and
+      so does the caller's own argument**. A `msg_conversation` urn is
+      `(<mailbox owner>,2-<thread>)`, so that component is what keeps a reply
+      inside this account's own inbox.
+
+      Both spellings are checked because they are not the same string and
+      nothing made them agree. `send_message` writes the **argument**; this
+      function reads the **answer**. Checking only the answer let a foreign
+      argument through whenever LinkedIn replied about some other thread;
+      checking only the argument would trust the one value the caller controls.
+      The argument half runs first and costs no request.
+
+    **It is not a participant check.** The messages answer carries no participant
+    roster to match against - the `Conversation` decorated into `included` is a
+    bare `entityUrn` stub in the capture (`tests/fixtures/raw/messages.json`),
+    and the participants that do appear are the senders of the messages on the
+    page, which need not include the operator on a thread they have not answered
+    yet. So the claim is "a thread in this account's mailbox that this session
+    can read", and it stops there.
+
+    The mailbox half is free - it rides in the answer the read already paid for -
+    and unlike a credential broker's allowlist regex, which pins the same
+    component from outside, it holds for every caller and not only for the ones
+    that arrived through the broker.
+
+    One round trip, paid by every send: `messages read` and `messages list` call
+    the reader directly and are unaffected.
+
+    **The page is handed back rather than dropped.** It used to return `None`.
+    `already_sent` reads the same page to decide whether this reply is already in
+    the thread, and re-fetching it would turn the one round trip this docstring
+    promises into two. The guarantees above are unchanged: every `raise` below
+    still runs first and in the same order, and the argument half still refuses
+    before any request goes out.
+    """
+    # The caller's own spelling, first and for free. `send_message` writes THIS
+    # string, not the one LinkedIn answers with, so checking only the answer left
+    # the two free to disagree: an answer naming this mailbox cleared a foreign
+    # argument straight into the createMessage body. It also costs nothing to
+    # refuse here rather than after a round trip.
+    if _mailbox_of(conversation_urn) != member_urn:
+        raise _foreign_mailbox(conversation_urn)
+    graph, entities = _messages_page(client, conversation_urn)
+    if not entities:
+        raise _unreadable_thread(conversation_urn)
+    mailboxes = _mailboxes(graph, entities)
+    if not mailboxes:
+        raise _unaddressed_thread(conversation_urn)
+    if mailboxes != {member_urn}:
+        raise _foreign_mailbox(conversation_urn)
+    return graph, entities
+
+
+def already_sent(graph: Graph, entities: list[dict], mailbox_urn: str, text: str) -> str | None:
+    """The urn of a message on this page that this account already sent with this text.
+
+    Pure: no request, no state. It reads the page `confirm_reply_target` already
+    fetched, which is what makes the check free and what bounds it - the window
+    is one server-default page of the newest messages in the thread, and a thread
+    busy enough to push the original off page 1 defeats it.
+
+    **It matches on text and sender, not on `originToken`.** The key is present
+    on the `Message` entity in the captures, but its value is `null` in every
+    captured message, so the field a naive design would match on is not readable
+    back. Text and sender are what survive the round trip: `body.text` through
+    `_text`, and the sender's `hostIdentityUrn` through `_participant` - the same
+    spelling as `mailbox_urn`.
+
+    Three things it cannot do, and the contract above it must not promise more:
+
+    * It cannot beat eventual consistency. A write that landed but is not yet
+      visible to the read-back is not found, and a second message goes out.
+    * It cannot see past the newest page.
+    * It matches text exactly. A reworded reply is a new message, and if LinkedIn
+      ever stopped round-tripping `body.text` byte-identically the check would
+      simply stop firing - which is the behaviour this replaced, not a
+      correctness failure.
+
+    The urn kind is checked rather than assumed, for the reason `_sent_urn`
+    checks it: the answer this page arrived in decorates the *conversation* in
+    beside the messages, and handing that urn back would report a thread as a
+    delivered message.
+    """
+    for entity in entities:
+        if _text(entity.get("body")) != text:
+            continue
+        sender = graph.deref(entity, "sender")
+        if isinstance(sender, dict) and _participant(sender)["urn"] == mailbox_urn:
+            urn = entity.get("entityUrn")
+            if isinstance(urn, str) and urn.startswith(MESSAGE_URN_PREFIX):
+                return urn
+    return None
+
+
+# A conversation urn is `urn:li:msg_conversation:(<mailbox>,2-<thread>)`. The
+# mailbox owner is the first element of that tuple - it is what makes the urn
+# address one account's inbox rather than a thread in the abstract - and the
+# thread half is ~40 bytes of unguessable entropy.
+CONVERSATION_URN_PREFIX = "urn:li:msg_conversation:("
+
+
+def _mailbox_of(urn: Any) -> str | None:
+    """The mailbox a conversation urn is addressed to, or None if it is not one."""
+    if not isinstance(urn, str) or not urn.startswith(CONVERSATION_URN_PREFIX):
+        return None
+    mailbox, separator, _ = urn[len(CONVERSATION_URN_PREFIX) :].partition(",")
+    return mailbox if separator and mailbox else None
+
+
+def _mailboxes(graph: Graph, entities: list[dict]) -> set[str]:
+    """Every mailbox named by a conversation urn in one messages answer.
+
+    Both spellings the capture carries are read: the `Conversation` stub in
+    `included`, and the `*conversation` reference on each message. Either alone
+    would be a single field to lose to a rotation, and this is a security check.
+    """
+    urns = [entity.get("entityUrn") for entity in graph.by_type("Conversation")]
+    urns += [entity.get("*conversation") for entity in entities]
+    return {mailbox for mailbox in (_mailbox_of(urn) for urn in urns) if mailbox}
+
+
+def _unreadable_thread(conversation: str) -> NotFound:
+    """A thread nothing was sent into, and no guess as to why. Exit 4.
+
+    A urn addressing somebody else's mailbox, a thread this session cannot see
+    and a real thread whose every message has been deleted all come back as the
+    same empty page, so this names the three rather than picking one - the rule
+    `feed._unreadable` is written to. `conversation` is the caller's own
+    argument and is left unscrubbed for the reason `_refused`'s is: it is the
+    only thing here that says which thread was refused.
+    """
+    return NotFound(
+        f"nothing was sent: {conversation} came back with no messages, so this account was not "
+        "shown to be in that thread. A conversation urn addressing somebody else's mailbox, a "
+        "thread this session cannot see, and a real thread whose messages have all been deleted "
+        "answer identically, so this does not claim which one it is. Take the urn from a page "
+        "of `linkedin messages list` rather than from the text of a message, and read it with "
+        "`linkedin messages read` before replying."
+    )
+
+
+def _foreign_mailbox(conversation: str) -> NotFound:
+    """A thread LinkedIn served out of somebody else's mailbox. Exit 4.
+
+    Definite, unlike `_unreadable_thread`: the answer named a mailbox and it was
+    not this account's, so there is one diagnosis rather than three. The urn is
+    the caller's own argument and stays unscrubbed for the reason that one's
+    does; the operator's own mailbox is not named back, because nothing in the
+    remedy needs it.
+    """
+    return NotFound(
+        f"nothing was sent: {conversation} is a thread in another member's mailbox. A "
+        "conversation urn names the inbox it hangs in as its first component, and a reply is "
+        "delivered into that inbox rather than into the thread it was quoted from - so this "
+        "one is refused whoever asked for it. Take the urn from a page of "
+        "`linkedin messages list`, which only ever lists this account's own threads."
+    )
+
+
+def _unaddressed_thread(conversation: str) -> NotFound:
+    """An answer with messages in it but no conversation urn anywhere. Exit 4.
+
+    Refused rather than allowed through. The mailbox check has nothing to read,
+    and a check that quietly skips itself the day LinkedIn's payload shape moves
+    is worse than no check: the guarantee stays written down while it stops being
+    provided. This is the shape that says a queryId or a decoration rotated.
+    """
+    return NotFound(
+        f"nothing was sent: LinkedIn answered for {conversation} with messages but named no "
+        "conversation, so which mailbox served them could not be established - and a reply is "
+        "delivered into a mailbox. This is a change in the shape of the messages response "
+        "rather than anything about the thread; `linkedin doctor` reports the queryIds this "
+        "surface is pinned to."
+    )
+
+
+# Namespaced so the digest cannot collide with one derived for another payload
+# on another surface, and versioned so a future change to what identifies a
+# message is a new namespace rather than a silent reinterpretation of an old
+# token.
+_TOKEN_NAMESPACE = b"linkedin-cli/createMessage/v1"
+
+
+def _derived_token(mailbox_urn: str, conversation_urn: str, text: str) -> str:
+    """A uuid4-shaped token that is a pure function of what identifies the write.
+
+    Derived rather than generated because under an agent gateway a retry is a
+    *fresh process* with no memory of the first attempt, and the broker does not
+    pass `--idempotency-key` - so a retry can only be recognised as one if its
+    identity comes out of the arguments. A `uuid.uuid4()` per call, which this
+    replaced, made every attempt look like a different message.
+
+    `uuid.UUID(..., version=4)` forces the version and variant bits, so the
+    result is syntactically a UUID4 - which is what the capture carries. The
+    `\\x00` join means no two different argument triples can be spelled as one
+    byte string by moving a boundary.
+    """
+    digest = hashlib.sha256(
+        b"\x00".join(
+            (
+                _TOKEN_NAMESPACE,
+                mailbox_urn.encode(),
+                conversation_urn.encode(),
+                text.encode(),
+            )
+        )
+    ).digest()
+    return str(uuid.UUID(bytes=digest[:16], version=4))
+
+
 def send_message(
     client: Any,
     mailbox_urn: str,
@@ -279,18 +528,31 @@ def send_message(
     * `conversationUrn` is required even when the conversation is brand new -
       the web client resolves or creates the conversation before sending.
 
-    **`idempotency_key` buys nothing from LinkedIn.** It sets `originToken` - and
-    the same captured body sends `"dedupeByClientGeneratedToken": false`, a field
-    whose name says the server is being told *not* to collapse repeats of the
-    client's token. This docstring used to assert the opposite, which was an
-    inference contradicted by the field three lines below it; the capture is the
-    fact, so the claim was corrected rather than the body, because editing a
-    captured body into something never observed is how this CLI gets a stranger's
-    inbox wrong. What the key actually delivers is a stable, caller-chosen token
-    on the wire - traceability, and nothing more. There is no client-side dedupe
-    here either. Two calls with the same key are two messages in the thread, and
-    nothing in this CLI unsends one, so a send whose answer was lost is resolved
-    by reading the thread back and not by repeating it.
+    **Nothing here asks LinkedIn to de-duplicate.** The captured body sends
+    `"dedupeByClientGeneratedToken": false`, a field whose name says the server
+    is being told *not* to collapse repeats of the client's token, and it is left
+    exactly as captured: editing a captured body into something never observed is
+    how this CLI gets a stranger's inbox wrong. An earlier docstring claimed the
+    opposite, which was an inference contradicted by the field three lines below
+    it.
+
+    **What the token does buy.** `originToken` is `_derived_token(...)` - a pure
+    function of the mailbox, the thread and the text - so a retry of the same
+    reply is byte-identical to the first attempt in everything but `trackingId`.
+    That is traceability on the wire; it is not idempotency, because the server
+    was told not to use it.
+
+    The property a caller can rely on lives one level up, in `cli._send_into`:
+    `already_sent` reads the thread page `confirm_reply_target` has already
+    fetched and refuses to post a reply this account can see it already sent.
+    That is *best effort* - see `already_sent` for exactly what it cannot see -
+    so a send whose answer was lost is still resolved by reading the thread back
+    rather than by assuming a repeat is free.
+
+    `idempotency_key` overrides the derived token, and that is its second and
+    more useful role: it is the one way to put the same text into the same thread
+    twice on purpose, because `cli._send_into` skips the dedupe when a key was
+    given. The broker does not expose the flag, so an agent cannot reach it.
     """
     if not text or not text.strip():
         raise ValueError("message text is empty")
@@ -300,7 +562,7 @@ def send_message(
             "body": {"attributes": [], "text": text},
             "renderContentUnions": [],
             "conversationUrn": conversation_urn,
-            "originToken": idempotency_key or str(uuid.uuid4()),
+            "originToken": idempotency_key or _derived_token(mailbox_urn, conversation_urn, text),
         },
         "mailboxUrn": mailbox_urn,
         "trackingId": os.urandom(16).decode("latin-1"),
@@ -413,9 +675,10 @@ def _refused(conversation: str, detail: str) -> UpstreamError:
     `detail` is scrubbed here rather than at the call site. It is LinkedIn's own
     prose out of a **200** body, so `transport.raise_for_status` - which scrubs
     the body it splices, transport.py `raise_for_status` - never saw it; and
-    `cli._report` renders this exception's `str()` onto stderr, which under
-    an agent gateway is permanent model context. Doing it in the constructor is what makes
-    the guarantee hold by construction instead of by the next caller remembering.
+    `cli._report` renders this exception's `str()` onto stderr, which under an
+    agent gateway is permanent model context. Doing it in the constructor is what
+    makes the guarantee hold by construction instead of by the next caller
+    remembering.
     `conversation` is deliberately left alone: it is the caller's own argument
     and the only thing here that says which thread to go and look at.
     """
@@ -432,9 +695,18 @@ def _unconfirmed(conversation: str, detail: str) -> UpstreamError:
 
     Reported rather than swallowed, and never as a success. Not marked retryable
     either - `cli._report` renders `.retryable` straight into the envelope an
-    agent branches on, and the payload switches LinkedIn's client-token dedupe
-    off (see `send_message`), so a retry that lands is a second message in front
-    of a real person that nothing here can take back.
+    agent branches on, and a machine-readable "yes, retry" would be a promise
+    this CLI cannot keep. `cli._send_into` does check an identical re-run against
+    the newest page of the thread before sending anything, but that check is best
+    effort by construction: it cannot see a write that landed and has not
+    appeared yet, and it cannot see past that page. Between those two, a blind
+    retry can still put a second message in front of a real person, and nothing
+    here takes one back.
+
+    This used to derive the same verdict from the wire field the payload carries.
+    Same answer, different reason - and the reason had to move, because a
+    sentence three hundred lines from the body it describes is one that goes
+    wrong silently.
 
     `detail` goes through the scrubber for the same reason `_refused`'s does.
     Every detail that reaches here today is a literal written in this file, so
@@ -446,9 +718,11 @@ def _unconfirmed(conversation: str, detail: str) -> UpstreamError:
     return UpstreamError(
         f"the message to {conversation} was sent but not confirmed: {scrub_secrets(detail)}. The "
         f"request reached LinkedIn, so it may already be in the thread - read it back with `linkedin "
-        f'messages read "{conversation}"` before doing anything else. Do not retry it blind: '
-        "the captured payload sends `dedupeByClientGeneratedToken: false`, so a second attempt "
-        "is a second message, and this CLI has no verb that unsends either of them."
+        f'messages read "{conversation}"` before doing anything else, because the thread is the '
+        "answer and this response is not. Re-running the identical command - same thread, same "
+        "--text - is checked against the newest page of the thread first and will not send a "
+        "second copy of a reply it can see there; it cannot see one that has not appeared yet, "
+        "and reworded text is a new message. Nothing here unsends either of them."
     )
 
 

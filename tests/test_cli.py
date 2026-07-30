@@ -6,9 +6,9 @@ against, so they are pinned harder than the human-readable text.
 Three things this file guards that are new since the browser pivot:
 
 * **`--rate` is validated here or nowhere.** Pacing is the only behavioural
-  control left after the transport moved into a browser, and the credential broker
-  allowlist is granular to the verb rather than the flag, so nothing outside
-  this process can stop an agent passing `--rate=0`.
+  control left after the transport moved into a browser, and the credential
+  broker's allowlist is granular to the verb rather than the flag, so nothing
+  outside this process can stop an agent passing `--rate=0`.
 * **A `session_expired` that reaches the top is terminal.** There is no re-sync
   any more; the remedy is `auth seed`, which an agent cannot run for itself. So
   the failures are counted and the breaker arms rather than letting a retry loop
@@ -343,16 +343,21 @@ def usage_block(flag: str) -> str:
 
 
 def test_the_usage_text_does_not_promise_the_dedupe_the_payload_switches_off():
-    """`--idempotency-key` is named after a guarantee nothing provides.
+    """`--idempotency-key` is named after a guarantee LinkedIn does not provide.
 
-    The captured `createMessage` body sends `"dedupeByClientGeneratedToken":
-    false` (docs/write-payloads.md), so LinkedIn is explicitly told *not* to
-    de-duplicate on the `originToken` the flag sets, and there is no client-side
-    dedupe either: the same key twice is two messages in a real person's thread.
-    The usage text said the opposite by implication - it explained `post
-    create`'s refusal by contrast with a dedupe `messages send` was supposed to
-    have - and the caller who passes this flag is precisely the one intending to
-    retry.
+    The assertions are unchanged and still right; the reasoning behind them has
+    moved. The usage text used to explain `post create`'s refusal by contrast
+    with a de-duplication `messages send` was supposed to have, which was false.
+    It is now false in the other direction too: the flag *overrides* the token
+    `messages send`/`reply` derive from the thread and the text, and switches off
+    the repeat check those verbs do before sending - so it is precisely the way
+    to put a second message carrying the same text into a real person's thread.
+
+    "second message" therefore has to stay in the block, truthfully and for a
+    new reason, and none of the three banned promises is needed to say it. The
+    block must not name a field in LinkedIn's request body either; that is
+    `tests/test_wire_field_stays_in_the_capture.py`'s rule, and this file is not
+    on its allowlist.
     """
     block = usage_block("idempotency-key")
     assert "second message" in block, "the flag's one real hazard is not stated"
@@ -436,19 +441,30 @@ def test_no_exit_code_is_the_retry_signal_and_exit_six_least_of_all():
 
     `surfaces/messaging.py:_unconfirmed` is what made the ambiguity expensive. A
     message that was sent and not confirmed exits 6, reports `retryable: false`
-    and says in prose not to retry it blind - the captured payload disables
-    LinkedIn's own dedupe, so a second attempt is a second message in a real
-    person's thread and this CLI has no verb that unsends either one. Alongside
+    and sends the caller to read the thread back before anything else. Alongside
     it, `cli.py` described exit 6 as "the code an agent retries". An agent
     branching on the code rather than the envelope would have done exactly the
-    thing three sentences of the message tell it not to.
+    thing the message tells it not to.
 
     Asserted against the source because the defect was documentation: the code
     already behaved, and only the prose an agent reads was wrong.
+
+    **Changed with the idempotent-reply work.** This used to assert the literal
+    "Do not retry it blind", which was the whole of the old advice and was
+    justified by a wire field. `messages reply` now checks an identical re-run
+    against the newest page of the thread, so the advice is "read it back first,
+    then re-run once" rather than "never" - the verdict `retryable: False` is
+    unchanged, because that check is best effort. The assertions below are the
+    same claim without the deleted sentence: the prose must order the read-back
+    first, and must still promise nothing about a retry being safe.
     """
     unconfirmed = messaging._unconfirmed(CONVERSATION, "the response named no message urn")
     assert cli._report(unconfirmed) == ("upstream", 6, False)
-    assert "Do not retry it blind" in str(unconfirmed)
+    message = str(unconfirmed)
+    assert "read it back with `linkedin messages read" in message
+    assert "before doing anything else" in message
+    for promise in ("retry is safe", "safe to retry", "just retry", "retry it"):
+        assert promise not in message.lower(), f"the unconfirmed message promises {promise!r}"
 
     # Nothing that exits 6 ever reports itself retryable, and the one thing that
     # does exits 5 - so the code carries no retry answer in either direction.
@@ -506,10 +522,10 @@ def test_raw_flag_unwraps_the_envelope(monkeypatch):
     assert envelope(out) == {"pong": True}
 
 
-# What LinkedIn answered `post create --visibility=CONNECTIONS` with on
-# HTTP 200, and the refusal inside the body. `--raw` had nothing to
-# say about it, so diagnosing it took a hand-written script - the one thing the
-# flag exists for. See docs/incidents.md.
+# What LinkedIn answered `post create --visibility=CONNECTIONS` with: HTTP 200,
+# and the refusal inside the body. `--raw` had nothing to say about it, so
+# diagnosing it took a hand-written script - the one thing the flag exists for.
+# See docs/incidents.md.
 GRAPHQL_REFUSAL = {
     "data": {"doCreateDashShare": None},
     "errors": [{"message": "Invalid input for enum 'dash_contentcreation_VisibilityType'"}],
@@ -538,9 +554,9 @@ def test_the_error_envelope_is_unchanged_without_the_flag():
 
 
 def test_a_raw_body_is_scrubbed_before_it_reaches_stderr():
-    """A body is where a live credential would ride out, and stderr under an agent gateway
-    is permanent model context. Assembled by concatenation so no live-shaped
-    literal enters a tracked file for `tools/leakcheck.py` to find."""
+    """A body is where a live credential would ride out, and stderr under an
+    agent gateway is permanent model context. Assembled by concatenation so no
+    live-shaped literal enters a tracked file for `tools/leakcheck.py` to find."""
     secret = "AQED" + "B" * 60
     client = FakeClient({"errors": [{"message": "denied"}], "cookie": f"li_at={secret}"})
     _, _, err = run(["post", "create", "--text=hi", "--raw"], client=client)
@@ -739,6 +755,12 @@ FEED_PAYLOAD = {
 
 CONVERSATION = f"urn:li:msg_conversation:({MEMBER},2-synthetic==)"
 
+# A thread hanging in somebody else's inbox. A conversation urn is
+# `(<mailbox owner>,2-<thread>)`, so this differs from the one above in exactly
+# the component that decides whose mailbox a message is delivered into.
+STRANGER = "urn:li:fsd_profile:ACoAASYNTHETICSTRANGER"
+FOREIGN_CONVERSATION = f"urn:li:msg_conversation:({STRANGER},2-synthetic==)"
+
 CONVERSATIONS_PAYLOAD = {
     "data": {"data": {"messengerConversationsByCategoryQuery": {"*elements": [CONVERSATION]}}},
     "included": [
@@ -758,17 +780,32 @@ CONVERSATIONS_PAYLOAD = {
 # urn the write really answers with rather than proving the refusal by accident.
 SENT_MESSAGE = {"data": {"*value": f"urn:li:msg_message:({MEMBER},2-synthetic==)"}}
 
-MESSAGES_PAYLOAD = {
-    "data": {"data": {"messengerMessagesBySyncToken": {"*elements": ["urn:li:msg_message:x"]}}},
-    "included": [
-        {
-            "$type": "com.linkedin.messenger.Message",
-            "entityUrn": "urn:li:msg_message:x",
-            "body": {"text": "hello"},
-            "deliveredAt": 1783583409545,
-        }
-    ],
-}
+
+def messages_payload(conversation: str = CONVERSATION) -> dict:
+    """One page of `conversation`, as the messages query answers it.
+
+    The thread is named twice, the way the capture names it: once as the
+    message's `*conversation` reference and once as a bare stub of its own. The
+    mailbox component of that urn is what `messages reply` checks against the
+    operator's own member urn, so a page that omitted it would let every reply
+    test pass against a surface that had stopped checking.
+    """
+    return {
+        "data": {"data": {"messengerMessagesBySyncToken": {"*elements": ["urn:li:msg_message:x"]}}},
+        "included": [
+            {
+                "$type": "com.linkedin.messenger.Message",
+                "entityUrn": "urn:li:msg_message:x",
+                "*conversation": conversation,
+                "body": {"text": "hello"},
+                "deliveredAt": 1783583409545,
+            },
+            {"$type": "com.linkedin.messenger.Conversation", "entityUrn": conversation},
+        ],
+    }
+
+
+MESSAGES_PAYLOAD = messages_payload()
 
 NOTIFICATIONS_PAYLOAD = {
     "data": {
@@ -923,13 +960,478 @@ def test_the_old_mark_read_spelling_is_refused_and_names_the_new_one():
 
 
 def test_messages_reply_sends_into_the_thread():
-    client = FakeClient(ME_PAYLOAD, SENT_MESSAGE)
+    # `me` first, then the thread page: the mailbox the answer is checked against
+    # is resolved before the read that produces the answer (`cmd_messages`), and
+    # it is cached in the ledger on any run but the first.
+    client = FakeClient(ME_PAYLOAD, MESSAGES_PAYLOAD, SENT_MESSAGE)
     code, out, _ = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
     assert code == 0
     assert envelope(out)["data"]["conversation_urn"] == CONVERSATION
     path, body, _ = client.posts[-1]
     assert path == "voyagerMessagingDashMessengerMessages?action=createMessage"
     assert body["message"]["body"]["text"] == "ack"
+
+
+def test_messages_reply_reads_the_thread_before_it_writes_into_it():
+    """`messaging.send_message` drops the urn into the createMessage body with no
+    lookup, and `reply <urn>` builds the identical request that `send
+    --conversation=<urn>` does - so before this, nothing on the reply path
+    established that the thread was one this account is in. The caller that
+    matters is an agent that has just read a stranger's DM: "reply in the thread"
+    is what an injected message says, and every urn the agent has listed is a
+    candidate."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(MESSAGES_PAYLOAD, SENT_MESSAGE)
+    code, _, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    assert "conversationUrn" in client.paths[0], "the reply went out before the thread was read"
+
+
+def test_messages_reply_refuses_a_thread_that_reads_back_empty():
+    """Exit 4, and nothing sent. What the read establishes is that LinkedIn
+    served this session a message from that thread; an empty page is the answer
+    for a urn naming somebody else's mailbox."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient({})
+    code, _, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 4
+    assert envelope(err)["error"]["code"] == "not_found"
+    assert client.posts == []
+
+
+def test_messages_reply_refuses_a_thread_in_another_members_mailbox():
+    """Exit 4, nothing sent, and the read is the only request it costs.
+
+    A conversation urn is `(<mailbox owner>,2-<thread>)` and `send_message` drops
+    it into the createMessage body untouched, so the mailbox component is what
+    decides whose inbox a reply lands in. The broker's value regex pins the same
+    component from outside; this holds for any caller, including one that never
+    went through the broker."""
+    state.State().remember("member_urn", MEMBER)
+    foreign = "urn:li:msg_conversation:(urn:li:fsd_profile:ACoAASYNTHETICSTRANGER,2-def==)"
+    client = FakeClient(messages_payload(foreign))
+    code, _, err = run(["messages", "reply", foreign, "--text=ack"], client=client)
+    assert code == 4
+    assert envelope(err)["error"]["code"] == "not_found"
+    assert client.posts == []
+    # No request at all: the caller's own urn names a foreign mailbox, and that
+    # is a string comparison. The answer-side check still exists for the case
+    # this cannot see - LinkedIn resolving to a thread other than the one asked
+    # about - and that one does cost the read.
+    assert client.paths == []
+
+
+def test_a_reply_refused_for_its_thread_costs_no_message_quota():
+    """The claim is taken before the read and handed back when nothing was sent,
+    the way every other locally-refused write is - `DAILY_CAPS["message"]` is
+    40/day and it is the bound R2 leans on."""
+    state.State().remember("member_urn", MEMBER)
+    code, _, _ = run(["messages", "reply", CONVERSATION, "--text=ack"], client=FakeClient({}))
+    assert code == 4
+    assert state.State().write_count("message", state.DAY) == 0
+
+
+def test_a_spent_cap_refuses_a_reply_before_it_spends_a_request(monkeypatch):
+    """Ordering, and it is the reason the check sits inside `_write` rather than
+    in front of it: the cap is a local file and the membership read is a live
+    round trip, so an agent that has spent its budget is told so without paying
+    for the answer."""
+    monkeypatch.setitem(state.DAILY_CAPS, "message", 0)
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient({})
+    code, _, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 5, err
+    assert envelope(err)["error"]["code"] == "write_quota_exceeded"
+    assert client.paths == [], "the cap was checked after a request went out"
+
+
+def test_messages_send_pays_for_the_same_round_trip_reply_does():
+    """It used to be exempted, and the exemption was the hole.
+
+    The argument for it was that `send`'s caller names `--conversation`
+    deliberately rather than being handed one by a message it just read - which
+    describes the operator and not the urn, and the urn is the whole input. Both
+    verbs reach `messaging.send_message` through one function now, so the read
+    is not a property of the verb any more.
+    """
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(MESSAGES_PAYLOAD, SENT_MESSAGE)
+    code, _, err = run(
+        ["messages", "send", f"--conversation={CONVERSATION}", "--text=hi"], client=client
+    )
+    assert code == 0, err
+    assert client.paths[-1] == "voyagerMessagingDashMessengerMessages?action=createMessage"
+    assert len(client.paths) == 2, "the thread read and the send, and nothing else"
+
+
+# ------------------------------------ every way a message reaches LinkedIn
+
+# The two spellings that end in `messaging.send_message`, with the arguments
+# that reach the send without a lookup. They are parametrized together because
+# the guard landed on `reply` alone the first time: `send --conversation=<urn>`
+# builds the byte-identical request one branch down in the same function, and it
+# took a stranger's urn to exit 0 with the message in their thread.
+SEND_PATHS = {
+    "reply": [CONVERSATION, "--text=hi"],
+    "send": [f"--conversation={CONVERSATION}", "--text=hi"],
+}
+
+
+@pytest.mark.parametrize("action", sorted(SEND_PATHS))
+def test_every_way_to_post_a_message_reads_the_thread_first(action):
+    """`confirm_reply_target`'s docstring claims the guard "holds for every
+    caller and not only for the ones that arrived through the broker". Both
+    verbs hand the same urn to the same function, so either both pay for the
+    read or the claim is false for whichever one does not."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(MESSAGES_PAYLOAD, SENT_MESSAGE)
+    code, _, err = run(["messages", action] + SEND_PATHS[action], client=client)
+    assert code == 0, err
+    assert "conversationUrn" in client.paths[0], "the message went out before the thread was read"
+
+
+@pytest.mark.parametrize("action", sorted(SEND_PATHS))
+def test_every_way_to_post_a_message_refuses_another_members_mailbox(action):
+    """Exit 4, nothing sent, whichever spelling was used. Reproduced against the
+    unguarded branch: `send --to=<mine> --conversation=<stranger-thread>` exited
+    0 with the message posted into the stranger's thread, because `--to` is read
+    only when `--conversation` is absent."""
+    state.State().remember("member_urn", MEMBER)
+    argv = [arg.replace(CONVERSATION, FOREIGN_CONVERSATION) for arg in SEND_PATHS[action]]
+    client = FakeClient(messages_payload(FOREIGN_CONVERSATION))
+    code, _, err = run(["messages", action] + argv, client=client)
+    assert code == 4
+    assert envelope(err)["error"]["code"] == "not_found"
+    assert client.posts == []
+
+
+# A member the operator has a thread with, and that thread as `messages list`
+# projects it. `--to` is the third way a conversation urn reaches the writer:
+# looked up rather than supplied, which is why it is easy to assume it needs no
+# check - the urn came from LinkedIn. It goes through the same one function.
+COUNTERPART = "urn:li:fsd_profile:ACoAASYNTHETICFRIEND00000000000000"
+
+
+def conversations_with_counterpart(conversation: str = CONVERSATION) -> dict:
+    participant = f"urn:li:msg_messagingParticipant:{COUNTERPART}"
+    return {
+        "data": {"data": {"messengerConversationsByCategoryQuery": {"*elements": [conversation]}}},
+        "included": [
+            {
+                "$type": "com.linkedin.messenger.Conversation",
+                "entityUrn": conversation,
+                "lastActivityAt": 1783583409545,
+                "read": True,
+                "*conversationParticipants": [participant],
+            },
+            {
+                "$type": "com.linkedin.messenger.MessagingParticipant",
+                "entityUrn": participant,
+                "hostIdentityUrn": COUNTERPART,
+                "participantType": {"member": {"firstName": {"text": "Synthetic"}}},
+            },
+        ],
+    }
+
+
+def test_a_looked_up_thread_is_confirmed_like_any_other():
+    """`send --to=<member>` finds the thread rather than being handed one, and
+    the urn arrives from LinkedIn's own listing - which is the argument for
+    exempting it and the reason not to. The exemption is what `--conversation`
+    had, and one call site means there is no per-branch exemption left to grant."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(conversations_with_counterpart(), MESSAGES_PAYLOAD, SENT_MESSAGE)
+    code, _, err = run(["messages", "send", f"--to={COUNTERPART}", "--text=hi"], client=client)
+    assert code == 0, err
+    assert "conversationUrn" in client.paths[1], "the thread was never read back"
+    assert client.posts, "nothing was sent, so this proves nothing about the guard"
+
+
+def test_a_looked_up_thread_in_another_mailbox_is_refused_too():
+    """The guard reads LinkedIn's answer rather than the caller's argument, so
+    it is not vacuous on a urn LinkedIn supplied: an answer naming another
+    member's mailbox is refused whoever produced the urn."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(
+        conversations_with_counterpart(FOREIGN_CONVERSATION),
+        messages_payload(FOREIGN_CONVERSATION),
+    )
+    code, _, err = run(["messages", "send", f"--to={COUNTERPART}", "--text=hi"], client=client)
+    assert code == 4
+    assert envelope(err)["error"]["code"] == "not_found"
+    assert client.posts == []
+
+
+# ------------------------------------- a reply this account already sent
+
+# The urn of the reply already on the page. Distinct from `SENT_MESSAGE`'s, so
+# "the urn it found" and "the urn a send would have answered with" cannot be
+# confused for each other.
+ALREADY_SENT_URN = f"urn:li:msg_message:({MEMBER},2-already-sent==)"
+
+
+def thread_with_reply(text: str, sender: str = MEMBER, conversation: str = CONVERSATION) -> dict:
+    """`messages_payload`, plus one more message on the page: `text`, from `sender`.
+
+    One page, not two answers: the dedupe window *is* the page
+    `confirm_reply_target` already fetched, so a fixture that needed a second
+    request would be testing a mechanism this design does not have.
+
+    `sender` is a parameter because the sender check is the whole difference
+    between "this account already said that" and "somebody quoted it back". The
+    participant is decorated the way the capture decorates one - a
+    `MessagingParticipant` carrying `hostIdentityUrn`, which is the same
+    spelling as the mailbox urn.
+    """
+    participant = f"urn:li:msg_messagingParticipant:{sender}"
+    page = messages_payload(conversation)
+    page["data"]["data"]["messengerMessagesBySyncToken"]["*elements"].append(ALREADY_SENT_URN)
+    page["included"] += [
+        {
+            "$type": "com.linkedin.messenger.Message",
+            "entityUrn": ALREADY_SENT_URN,
+            "*conversation": conversation,
+            "*sender": participant,
+            "body": {"text": text},
+            "deliveredAt": 1783583409546,
+        },
+        {
+            "$type": "com.linkedin.messenger.MessagingParticipant",
+            "entityUrn": participant,
+            "hostIdentityUrn": sender,
+            "participantType": {"member": {"firstName": {"text": "Synthetic"}}},
+        },
+    ]
+    return page
+
+
+def reads(client: FakeClient) -> list[str]:
+    """The GETs only. `FakeClient.post` routes through `get`, so `paths` holds
+    the create as well and counting it would hide a second round trip."""
+    return [path for path in client.paths if "voyagerMessagingGraphQL" in path]
+
+
+def test_a_reply_this_account_already_sent_with_this_text_is_not_sent_again():
+    """The mechanism, end to end. The reply is on the page the membership check
+    already paid for, so nothing is posted and the envelope says why - `deduped`
+    is a field an agent can branch on rather than a string it has to parse."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("ack"))
+    code, out, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    assert client.posts == []
+    data = envelope(out)["data"]
+    assert data["deduped"] is True
+    assert data["message_urn"] == ALREADY_SENT_URN
+    assert data["conversation_urn"] == CONVERSATION
+
+
+def test_the_same_text_from_the_other_party_does_not_suppress_a_reply():
+    """The negative that gives the test above its teeth: without the sender
+    check, "ok" quoted back by the counterpart would silently swallow the
+    operator's own "ok" - and the agent would be told it had already replied to
+    a thread it has never answered."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("ack", sender=COUNTERPART), SENT_MESSAGE)
+    code, out, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    assert client.posts, "a reply was suppressed by a message this account did not send"
+    assert envelope(out)["data"]["deduped"] is False
+
+
+def test_different_text_in_the_thread_does_not_suppress_a_reply():
+    """The other half: matching on the thread rather than on the text would make
+    every second reply into any thread a no-op."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("something else entirely"), SENT_MESSAGE)
+    code, out, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    assert client.posts
+    assert envelope(out)["data"]["deduped"] is False
+
+
+def test_the_dedupe_check_costs_no_second_round_trip():
+    """The check reads the page `confirm_reply_target` already fetched - the same
+    argument the mailbox half is worth having on. A dedupe that cost its own read
+    would double the traffic of the verb it exists to make cheaper."""
+    state.State().remember("member_urn", MEMBER)
+    deduped = FakeClient(thread_with_reply("ack"))
+    assert run(["messages", "reply", CONVERSATION, "--text=ack"], client=deduped)[0] == 0
+    assert len(reads(deduped)) == 1
+
+    sent = FakeClient(thread_with_reply("something else"), SENT_MESSAGE)
+    assert run(["messages", "reply", CONVERSATION, "--text=ack"], client=sent)[0] == 0
+    assert len(reads(sent)) == 1
+
+
+def test_a_deduped_reply_still_spends_a_write_slot(monkeypatch):
+    """A deduped reply is not free: it issues the live, browser-driven GET that
+    `confirm_reply_target` has always issued, against the operator's account.
+
+    Refunding the slot would remove a control rather than save one. `claim_write`
+    runs *before* that round trip so an agent that has spent its budget is
+    refused without paying for the answer - and if every identical attempt were
+    refunded, the 40/day cap could never be reached by an identical-text loop, so
+    that pre-round-trip refusal would never fire on this verb again.
+
+    `ctx.attempted_write` is asserted directly because it is the flag that
+    decides commit-or-release, and `_WriteWatch.post` is deliberately no longer
+    its only setter."""
+    state.State().remember("member_urn", MEMBER)
+    seen = {}
+    real_write = cli._write
+
+    def spy(ctx, kind, write, *, cleanup=False):
+        try:
+            return real_write(ctx, kind, write, cleanup=cleanup)
+        finally:
+            seen["attempted_write"] = ctx.attempted_write
+
+    monkeypatch.setattr(cli, "_write", spy)
+    client = FakeClient(thread_with_reply("ack"))
+    code, _, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    assert client.posts == [], "this has to be the deduped path or it proves nothing"
+    assert seen["attempted_write"] is True
+    assert state.State().write_count("message", state.DAY) == 1
+
+
+def test_a_dry_run_reply_spends_nothing():
+    """The twin the test above needs: on a ledger that counted every invocation,
+    "+1 on a dedupe" would pass for free."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("ack"))
+    code, _, err = run(
+        ["messages", "reply", CONVERSATION, "--text=ack", "--dry-run"], client=client
+    )
+    assert code == 0, err
+    assert state.State().write_count("message", state.DAY) == 0
+    assert reads(client) == [], "a dry run does not read the thread either"
+    assert [dry for _, _, dry in client.posts] == [True], "a dry run previews and sends nothing"
+
+
+def test_a_deduped_reply_reports_the_urn_it_found_not_a_fabricated_one():
+    """The urn has to come off the page. Answering with the conversation urn, or
+    with a null, would put an agent back where `_confirm_sent` was written to
+    stop it: a success it does not look at again."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("ack"))
+    code, out, err = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
+    assert code == 0, err
+    found = envelope(out)["data"]["message_urn"]
+    assert found == ALREADY_SENT_URN
+    assert found.startswith(messaging.MESSAGE_URN_PREFIX)
+    assert found != SENT_MESSAGE["data"]["*value"]
+
+
+def test_the_mailbox_guard_still_runs_before_the_dedupe_check(monkeypatch):
+    """The refactor that gave `confirm_reply_target` a return value is exactly
+    where the security gate could silently move behind the convenience check.
+    The page here *would* match, so only ordering can produce this refusal."""
+    state.State().remember("member_urn", MEMBER)
+    calls = []
+    monkeypatch.setattr(messaging, "already_sent", lambda *args, **kw: calls.append(args) or None)
+    client = FakeClient(thread_with_reply("ack", conversation=FOREIGN_CONVERSATION))
+    code, _, err = run(["messages", "reply", FOREIGN_CONVERSATION, "--text=ack"], client=client)
+    assert code == 4
+    assert envelope(err)["error"]["code"] == "not_found"
+    assert calls == [], "the dedupe check ran on a thread the guard refuses"
+    assert client.posts == []
+
+
+def test_an_explicit_idempotency_key_is_the_only_way_past_the_dedupe():
+    """Sending the same text into the same thread twice on purpose has to stay
+    reachable for the operator, and `--idempotency-key` is what makes it so: it
+    overrides the derived token and skips the check. It is not in the broker's
+    flag allowlist, so an agent cannot reach it - which is the point, and why
+    this is a design property rather than a gap."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(thread_with_reply("ack"), SENT_MESSAGE)
+    code, out, err = run(
+        ["messages", "reply", CONVERSATION, "--text=ack", "--idempotency-key=on-purpose"],
+        client=client,
+    )
+    assert code == 0, err
+    assert client.posts, "the escape hatch was closed"
+    assert client.posts[0][1]["message"]["originToken"] == "on-purpose"
+    assert envelope(out)["data"]["deduped"] is False
+
+
+def test_the_cli_reaches_the_message_writer_from_exactly_one_place():
+    """Structural, and it is the point of the fix rather than a nicety.
+
+    Two call sites is how the first guard came to cover one of them: `reply` and
+    `send` built the same createMessage body from two branches of one function,
+    and only the branch somebody was looking at got the check. One call site
+    cannot drift from itself.
+    """
+    calls = [
+        node
+        for node in ast.walk(ast.parse(inspect.getsource(cli)))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "send_message"
+    ]
+    assert len(calls) == 1, "a second path into `messaging.send_message` is a second guard to keep"
+
+
+def test_the_reported_send_into_a_strangers_thread_is_refused():
+    """The exact invocation the review reproduced: a recipient this account may
+    write to, and a conversation urn hanging in somebody else's mailbox. It
+    exited 0 with the message posted into the stranger's thread - `--to` is read
+    only when `--conversation` is absent, so the recipient argument made the
+    call look addressed while contributing nothing to where it went."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient(messages_payload(FOREIGN_CONVERSATION), SENT_MESSAGE)
+    code, out, _ = run(
+        [
+            "messages",
+            "send",
+            f"--to={MEMBER}",
+            f"--conversation={FOREIGN_CONVERSATION}",
+            "--text=hi",
+        ],
+        client=client,
+    )
+    assert code != 0, out
+    assert client.posts == [], "a message was delivered into another member's mailbox"
+
+
+def test_messages_send_refuses_naming_its_destination_twice():
+    """`--to` was read only inside `if not conversation:`, so passing both made
+    the recipient look like validation while contributing nothing: the message
+    went wherever the urn said and the flag naming a human was dropped. Refused
+    rather than resolved, for the reason `mark-all-read <urn>` is refused - a
+    flag this CLI would drop is a flag it says no to."""
+    state.State().remember("member_urn", MEMBER)
+    client = FakeClient()
+    code, _, err = run(
+        ["messages", "send", f"--to={MEMBER}", f"--conversation={CONVERSATION}", "--text=hi"],
+        client=client,
+    )
+    assert code == 2
+    body = envelope(err)
+    assert body["error"]["code"] == "usage"
+    assert "--to" in body["error"]["message"] and "--conversation" in body["error"]["message"]
+    assert client.posts == []
+    assert client.paths == []
+
+
+def test_messages_send_still_needs_one_of_the_two_ways_to_name_a_destination():
+    """Mutually exclusive, not optional. Neither flag is a send with no address."""
+    code, _, err = run(["messages", "send", "--text=hi"], client=FakeClient())
+    assert code == 2
+    message = envelope(err)["error"]["message"]
+    assert "--to" in message and "--conversation" in message
+
+
+def test_reading_a_thread_still_costs_exactly_one_request():
+    """The round trip is on the write path only; a read that paid it twice would
+    double every page an agent turns."""
+    client = FakeClient(MESSAGES_PAYLOAD)
+    code, _, err = run(["messages", "read", CONVERSATION], client=client)
+    assert code == 0, err
+    assert len(client.paths) == 1
 
 
 def test_messages_reply_dry_run_sends_nothing_real():
@@ -942,6 +1444,12 @@ def test_messages_reply_dry_run_sends_nothing_real():
     )
     assert code == 0, err
     assert client.posts[-1][2] is True
+    # The membership read is skipped under a dry run, and both halves of that
+    # matter: `_WriteWatch.get` turns any read under `--dry-run` into a preview
+    # of *that read*, which would replace the createMessage body the operator is
+    # here to approve - and a dry run sends nothing, so there is no reply to
+    # confine.
+    assert client.paths == ["voyagerMessagingDashMessengerMessages?action=createMessage"]
 
 
 def test_text_content_flag_does_not_change_output_format():
@@ -950,7 +1458,7 @@ def test_text_content_flag_does_not_change_output_format():
     Overloading one name meant the first real `messages reply` printed its result
     as human text instead of the JSON envelope an agent parses.
     """
-    client = FakeClient(ME_PAYLOAD, SENT_MESSAGE)
+    client = FakeClient(ME_PAYLOAD, MESSAGES_PAYLOAD, SENT_MESSAGE)
     code, out, _ = run(["messages", "reply", CONVERSATION, "--text=ack"], client=client)
     assert code == 0
     body = envelope(out)
@@ -1069,8 +1577,8 @@ def test_a_share_urn_is_refused_rather_than_converted(verb):
 
 
 def test_comment_delete_removes_the_comment_and_reports_what_it_removed():
-    """The undo `comment` never had. Verified live; the route, the
-    doubled urn and the asymmetric collections are in docs/write-payloads.md."""
+    """The undo `comment` never had. Verified live; the route, the doubled urn
+    and the asymmetric collections are in docs/write-payloads.md."""
     client = FakeClient({})
     code, out, err = run(["comment", "delete", COMMENT_URN], client=client)
     assert code == 0, err
@@ -1337,12 +1845,27 @@ def test_a_dry_run_react_asks_the_supervisor_for_nothing_but_status():
 # ------------------------------------------------- the ledger and message writes
 
 # Every message write, with the arguments that reach the send without a lookup.
-# `--conversation` is passed so these test the ledger rather than the search.
+# `--conversation` is passed so these test the ledger rather than the search -
+# and without `--to`, which names the same destination a second way and is
+# refused alongside it.
 MESSAGE_WRITES = {
-    "send": [f"--to={MEMBER}", f"--conversation={CONVERSATION}", "--text=hi"],
+    "send": [f"--conversation={CONVERSATION}", "--text=hi"],
     "reply": [CONVERSATION, "--text=hi"],
     "mark-all-read": ["--yes"],
 }
+
+
+def message_write_client(action: str) -> FakeClient:
+    """A client queued for one message write, whatever it costs to get there.
+
+    `send` and `reply` both read the thread back before they send into it - they
+    are one call site - so their queues start with that page; `mark-all-read`
+    addresses the whole mailbox and goes straight to the wire. Written as a
+    function rather than a longer table because the difference is one request
+    and naming it here keeps the ledger tests about the ledger.
+    """
+    payloads = [] if action == "mark-all-read" else [MESSAGES_PAYLOAD]
+    return FakeClient(*payloads, SENT_MESSAGE)
 
 
 @pytest.mark.parametrize("action", sorted(MESSAGE_WRITES))
@@ -1352,7 +1875,7 @@ def test_a_message_write_is_recorded_against_the_message_budget(action):
     from react/unreact/comment alone. The one bound on a prompt-injected agent
     sending DMs was the 1 req/s pacer."""
     state.State().remember("member_urn", MEMBER)
-    client = FakeClient(SENT_MESSAGE)
+    client = message_write_client(action)
     code, _, err = run(["messages", action] + MESSAGE_WRITES[action], client=client)
     assert code == 0, err
     assert client.posts, "nothing was sent, so this proves nothing about the ledger"
@@ -1364,7 +1887,8 @@ def test_a_message_write_stops_at_the_cap_before_it_is_sent(action, monkeypatch)
     monkeypatch.setitem(state.DAILY_CAPS, "message", 1)
     state.State().remember("member_urn", MEMBER)
     assert (
-        run(["messages", action] + MESSAGE_WRITES[action], client=FakeClient(SENT_MESSAGE))[0] == 0
+        run(["messages", action] + MESSAGE_WRITES[action], client=message_write_client(action))[0]
+        == 0
     )
 
     second = FakeClient()
@@ -1427,9 +1951,9 @@ def test_an_uncaptured_verb_says_so_instead_of_guessing_a_body(argv):
     run can still close - and the message names the method. That is not true of
     the invitation stubs, which are refused for a reason no capture can change;
     they are checked separately, and the two must not drift back into one
-    message. `comment delete` left this list when its route was verified live on
-    a live run - by read-back against our own throwaway post rather than by
-    interception, which docs/write-payloads.md argues for at length.
+    message. `comment delete` left this list when its route was verified live -
+    by read-back against our own throwaway post rather than by interception,
+    which docs/write-payloads.md argues for at length.
     """
     code, _, err = run(argv, client=FakeClient())
     assert code == 2
@@ -1502,7 +2026,8 @@ def test_a_rate_outside_the_accepted_range_is_a_usage_error(raw):
     """`--rate=0` used to disable pacing *and* skip writing the timestamp the
     next invocation paces against, so an agent in a loop was unpaced from then
     on. Pacing is the only behavioural control left after the pivot, and the
-    the credential broker allowlist is granular to the verb, so it cannot block a flag."""
+    credential broker's allowlist is granular to the verb, so it cannot block a
+    flag."""
     client = FakeClient(ME_PAYLOAD)
     code, _, err = run(["me", f"--rate={raw}"], client=client)
     assert code == 2
@@ -1623,9 +2148,9 @@ def test_auth_status_reports_the_managed_profile():
 
 
 def test_auth_export_is_not_a_verb():
-    """Its only possible output is a live `li_at` on stdout, which under an agent gateway
-    is permanent model context - and dispatch is granular to the verb, so an
-    allowlist permitting `seed` could not have denied `export`."""
+    """Its only possible output is a live `li_at` on stdout, which under an agent
+    gateway is permanent model context - and dispatch is granular to the verb, so
+    an allowlist permitting `seed` could not have denied `export`."""
     code, _, err = run(["auth", "export"], client=FakeClient(ME_PAYLOAD))
     assert code == 2
     assert "export" in envelope(err)["error"]["message"]
@@ -2545,15 +3070,15 @@ def test_the_sweep_rejects_a_command_this_cli_would_not_answer(phrase):
         "doctor",
         "messages mark-all-read",
         "post create",
-        # Shipped once its payload was transcribed from the a live run capture.
-        # It sat in the list below for as long as `post create` had no inverse.
+        # Shipped once its payload was transcribed from a live capture run. It
+        # sat in the list below for as long as `post create` had no inverse.
         "post delete",
         # Same capture run, same reason. Its *undo* is still a stub, which is why
         # the sweep has to resolve a sub-verb rather than trusting the verb.
         "invite",
-        # Shipped once its route was verified live. `invitations
-        # sent` is the stub beside it, so this verb is the second one whose two
-        # halves the sweep has to tell apart.
+        # Shipped once its route was verified live. `invitations sent` is the stub
+        # beside it, so this verb is the second one whose two halves the sweep has
+        # to tell apart.
         "invitations",
         "invitations list",
         # And the third. `comment` writes, `comment delete` undoes it, and both
@@ -2572,7 +3097,7 @@ def test_the_sweep_accepts_what_the_cli_really_dispatches(phrase):
     [
         "notifications mark-read",
         "messages mark-read",
-        # `invite` itself shipped once the a live run capture was transcribed;
+        # `invite` itself shipped once its captured payload was transcribed;
         # its undo did not, and cannot - the surface it lives on is no longer
         # Voyager. `invitations sent` is refused for the same reason.
         "invite withdraw",
@@ -2617,7 +3142,12 @@ INVOCATIONS = {
     "messages read": ["messages", "read", "urn:li:msg_conversation:(x,y)"],
     "messages counts": ["messages", "counts"],
     "messages send": ["messages", "send", "--to=some-person", "--text=hi"],
-    "messages reply": ["messages", "reply", "urn:li:msg_conversation:(x,y)", "--text=hi"],
+    # A real conversation urn, not a `(x,y)` placeholder: `confirm_reply_target`
+    # now checks the caller's own argument names this mailbox, and a placeholder
+    # names `x`. That it used to reach the wire is the defect, not the fixture -
+    # the argument said one mailbox, the answer said another, and the write went
+    # out addressed to the argument.
+    "messages reply": ["messages", "reply", CONVERSATION, "--text=hi"],
     "messages mark-read": ["messages", "mark-read", "urn:li:msg_conversation:(x,y)"],
     "messages mark-all-read": ["messages", "mark-all-read", "--yes"],
     "notifications list": ["notifications", "list"],
@@ -2715,9 +3245,9 @@ def test_the_refusals_the_sweep_derives_are_the_ones_cli_hard_codes():
     # `test_no_shipped_message_names_a_command_that_does_not_exist` and its
     # backticked twin check from the other direction.
     assert "post" not in partial
-    # `comment delete` went the same way when its route was verified live on
-    # a live run. `cmd_comment` still branches on the sub-verb, so the derivation
-    # has to be seeing that the branch *writes* rather than raises.
+    # `comment delete` went the same way when its route was verified live.
+    # `cmd_comment` still branches on the sub-verb, so the derivation has to be
+    # seeing that the branch *writes* rather than raises.
     assert "comment" not in partial
 
 
@@ -2737,7 +3267,11 @@ def _ledgered(argv: list[str]) -> tuple[bool, bool]:
 
     class Recorder:
         def get(self, path, dry_run=False):
-            return {}
+            # `messages reply` reads the thread back before it sends into it
+            # (`cmd_messages`), and an empty page there is a refusal - which
+            # would turn the one write this test exists to watch into a skip,
+            # silently, and take the ledger claim it is checking with it.
+            return MESSAGES_PAYLOAD if "conversationUrn" in path else {}
 
         def post(self, path, body, dry_run=False):
             posted.append(path)
@@ -2891,13 +3425,12 @@ def test_a_spent_cap_never_refuses_a_preview(phrase, monkeypatch):
 
 
 def test_no_stub_sends_its_reader_to_the_capture_method_that_was_withdrawn():
-    """Phase B of the a live run design says to capture a write by *performing*
-    it - "publish and delete a throwaway post". That method sent a real
-    connection invitation to the wrong person and was replaced by
-    capture-by-interception, which learns the payload without the action ever
-    reaching LinkedIn. A stub that cites the withdrawn phase is an instruction to
-    repeat the incident, and it is on the one path a reader follows when they set
-    out to fill the gap.
+    """The superseded capture phase said to capture a write by *performing* it -
+    "publish and delete a throwaway post". That method sent a real connection
+    invitation to the wrong person and was replaced by capture-by-interception,
+    which learns the payload without the action ever reaching LinkedIn. A stub
+    that cites the withdrawn phase is an instruction to repeat the incident, and
+    it is on the one path a reader follows when they set out to fill the gap.
 
     `_POST_DELETE` was checked here too until `post delete` shipped. Its removal
     is asserted rather than assumed: a stub message that outlives its stub goes
@@ -2914,9 +3447,7 @@ def test_no_stub_sends_its_reader_to_the_capture_method_that_was_withdrawn():
     assert not hasattr(cli, "_NOT_WIRED"), "a stub message outlived the stub"
     for name in ("_NOT_CAPTURED",):
         message = getattr(cli, name)
-        assert "a live run-linkedin-cli-design.md" not in message, (
-            f"{name} points at the superseded capture-by-doing phase"
-        )
+        assert "design.md" not in message, f"{name} points at the superseded capture-by-doing phase"
         assert "interception" in message, f"{name} does not name the method that replaced it"
 
 
@@ -2925,9 +3456,9 @@ def test_the_invitation_stubs_do_not_send_their_reader_on_a_capture_run():
     capture-by-interception is the wrong instruction.
 
     `invite withdraw` and `invitations sent` are not uncaptured payloads. The
-    screen they live on left Voyager (docs/sdui-migration.md, observed live
-    a live run), so a capture run cannot succeed - and the last two capture runs
-    against this surface cost a stranger's invitation each. A stub that still
+    screen they live on left Voyager (docs/sdui-migration.md, observed live), so
+    a capture run cannot succeed - and the last two capture runs against this
+    surface cost a stranger's invitation each. A stub that still
     said "capture it" would be an instruction to repeat that, aimed at exactly
     the reader who has set out to close the gap.
     """
@@ -3024,16 +3555,51 @@ def test_no_shipped_file_names_the_deleted_transport_selector():
 # ---------------------------------------------------------------------- dry run
 
 
-def offline_client(asked):
+def offline_client(asked, status=None):
     """A real `BrowserClient` for which issuing any request is a test failure."""
 
     def request_fn(payload, **kwargs):
         asked.append(payload)
         if payload.get("op") == "status":
-            return {"pid": 4242, "profile": "/managed"}
+            return status if status is not None else {"pid": 4242, "profile": "/managed"}
         raise AssertionError("--dry-run made a real request")
 
     return browser.BrowserClient(rate=1.0, state=NoPace(), request_fn=request_fn)
+
+
+# A JSESSIONID value in the shape `transport._SECRET_VALUES` matches, and the one
+# `tools/leakcheck.py` already knows is synthetic. LinkedIn echoes this exact
+# value back as `?ct=` on a checkpoint URL, so the leak these pin is the real one
+# rather than a stand-in for it.
+CSRF_TOKEN = "ajax:1111222233334444555"
+CHECKPOINT_URL = f"https://www.linkedin.com/checkpoint/challenge/AgHRk?ct={CSRF_TOKEN}"
+
+
+class ParkedBrowser:
+    """Only the three things the daemon's `status` reads off a resident browser."""
+
+    profile = "/managed/profile"
+    relaunched = 0
+
+    def __init__(self, href):
+        self._href = href
+
+    def page_url(self):
+        return self._href
+
+
+def daemon_status(href):
+    """The status dict a real supervisor answers with, built by the daemon itself.
+
+    Not typed out here, deliberately. `--dry-run` returns that dict *verbatim* as
+    `runs_in` and `doctor` projects it, so a hand-written stand-in would pin
+    whatever this file invented and would have gone on passing while the daemon
+    handed both of them a live credential.
+    """
+    answer, _ = cli.supervisor._dispatch(
+        {"op": "status"}, ParkedBrowser(href), Path("/state/linkedin.sock"), 0.0
+    )
+    return answer
 
 
 def test_dry_run_previews_the_request_without_asking_for_a_fetch():
@@ -3048,6 +3614,34 @@ def test_dry_run_previews_the_request_without_asking_for_a_fetch():
     assert [p["op"] for p in asked] == ["status"]
     assert preview["headers"]["csrf-token"] == transport.REDACTED
     assert "ajax:" not in out
+
+
+def test_a_dry_run_reply_never_prints_the_query_string_of_the_live_page():
+    """A preview reports where the call *would* run, which is the supervisor's
+    `status` dict handed back verbatim as `runs_in` - and a session parked on a
+    checkpoint carries the csrf token back in `?ct=`, which *is* the JSESSIONID
+    cookie value (`transport.py`).
+
+    The same leak `doctor` had, on the path that is worse: `messages reply` is an
+    allowlisted verb under the credential broker, and `--dry-run` skips the
+    membership read, the ledger claim, the cap and the breaker and makes no
+    LinkedIn round trip at all - so it is a credential oracle that re-answers as
+    fast as the caller is paced. `doctor` was projected and this was not, which is
+    why the reduction now lives in the daemon where both consumers inherit it.
+    """
+    state.State().remember("member_urn", MEMBER)
+    asked = []
+    client = offline_client(asked, status=daemon_status(CHECKPOINT_URL))
+    code, out, err = run(
+        ["messages", "reply", CONVERSATION, "--text=hi", "--dry-run"], client=client
+    )
+    assert code == 0, err
+    assert CSRF_TOKEN not in out
+    assert "ct=" not in out
+    assert [p["op"] for p in asked] == ["status"]
+    # The path survives for the reason it survives in `doctor`: it is the half
+    # that says the browser is sitting on a checkpoint.
+    assert envelope(out)["data"]["runs_in"]["page_url"] == "/checkpoint/challenge/AgHRk"
 
 
 def test_a_dry_run_read_previews_its_request_instead_of_issuing_it():
@@ -3080,14 +3674,7 @@ def test_a_dry_run_send_with_a_conversation_previews_and_spends_nothing():
     state.State().remember("member_urn", MEMBER)
     client = FakeClient()
     code, _, err = run(
-        [
-            "messages",
-            "send",
-            f"--to={MEMBER}",
-            f"--conversation={CONVERSATION}",
-            "--text=hi",
-            "--dry-run",
-        ],
+        ["messages", "send", f"--conversation={CONVERSATION}", "--text=hi", "--dry-run"],
         client=client,
     )
     assert code == 0, err
@@ -3142,7 +3729,7 @@ def test_a_dry_run_message_is_still_previewable_once_the_daily_cap_is_gone(monke
     monkeypatch.setitem(state.DAILY_CAPS, "message", 1)
     state.State().remember("member_urn", MEMBER)
     args = ["messages", "reply", CONVERSATION, "--text=hi"]
-    assert run(args, client=FakeClient(SENT_MESSAGE))[0] == 0
+    assert run(args, client=message_write_client("reply"))[0] == 0
     assert run(args, client=FakeClient())[0] == 5
 
     client = FakeClient()
@@ -3190,6 +3777,52 @@ def test_doctor_reports_the_browser_instead_of_a_session_source(monkeypatch):
     assert "transport" not in data
     # A diagnostic that started a browser would change what it was diagnosing.
     assert asked == [({"op": "status"}, {"autostart": False})]
+
+
+def _doctor_with_page_url(monkeypatch, href: str):
+    """`doctor` against a supervisor whose browser is parked on `href`.
+
+    The answer is assembled by the daemon (`daemon_status`) rather than typed
+    out, because the reduction being checked happens *there* now - one source,
+    two consumers, and the other one is `--dry-run`'s `runs_in`.
+    """
+    monkeypatch.setattr(cli.supervisor, "request", lambda payload, **kw: daemon_status(href))
+    return run(["doctor"], client=FakeClient())
+
+
+def test_doctor_never_prints_the_query_string_of_the_page_the_browser_is_on(monkeypatch):
+    """`page_url` is `location.href` read out of the live page, and a session
+    parked on a checkpoint carries the csrf token back in the query string as
+    `?ct=` - which *is* the JSESSIONID cookie value (`transport.py`). `doctor`
+    returned the supervisor's status dict verbatim, so its success path could
+    print a live session credential onto stdout, where under an agent gateway it
+    is permanent model context.
+
+    Nothing downstream catches it: `render.ok` never scrubs and cannot, because
+    `profile get` legitimately returns an `ACoAA…` urn the patterns would eat
+    (render.py's own docstring says so), and the tenant that runs under the
+    credential broker ships no scrub literals by design.
+    """
+    code, out, err = _doctor_with_page_url(monkeypatch, CHECKPOINT_URL)
+    assert code == 0, err
+    assert CSRF_TOKEN not in out
+    assert CSRF_TOKEN not in err
+    assert "ct=" not in out
+
+
+def test_doctor_still_reports_which_page_the_browser_is_parked_on(monkeypatch):
+    """The path survives, and it is the half that carries the diagnosis: "which
+    page is it on" is the question `status` exists to answer, and a session
+    parked on a checkpoint is exactly the answer an operator needs
+    (`supervisor.Browser.page_url`). Redacting the whole field would take the
+    diagnosis away to remove the credential."""
+    _, out, _ = _doctor_with_page_url(monkeypatch, CHECKPOINT_URL)
+    assert envelope(out)["data"]["browser"]["page_url"] == "/checkpoint/challenge/AgHRk"
+
+
+def test_doctor_leaves_an_ordinary_page_url_readable(monkeypatch):
+    _, out, _ = _doctor_with_page_url(monkeypatch, "https://www.linkedin.com/feed/")
+    assert envelope(out)["data"]["browser"]["page_url"] == "/feed/"
 
 
 def test_doctor_answers_when_no_supervisor_is_running(monkeypatch):

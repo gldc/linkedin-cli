@@ -5,6 +5,19 @@ invocation is a fresh process that would start with a full bucket, so an agent
 firing commands in a loop would be paced at exactly zero. The pacing clock and
 the write counters therefore live on disk, guarded by `fcntl.flock`.
 
+Who each of these binds, because the caps below read as though they were all the
+agent's boundary and four of the five are not. Where a credential broker fronts
+this CLI, the `linkedin` tool is allowlisted only a subset of its subcommands -
+twelve under the deployment this was written for, of which exactly one is a write
+(`messages reply`). Of the five capped kinds, that allowlist therefore leaves the
+agent only `message`. The `invite`, `post`, `comment` and `react` caps, and the
+whole cleanup-exempt path with its ceiling, are reachable only by the operator
+running the CLI by hand. The throttle cooldown and the circuit breaker still bind
+both, and so does the pacing above - every one of the eleven reads goes through
+them. The allowlist lives outside this repo, so this paragraph is only as true as
+the broker policy in force. Nothing here is scoped to the operator or skipped for
+the agent; this says who can reach what, not what to enforce.
+
 Two consequences worth knowing before editing:
 
 * The lock is taken on a **sibling** file, not on the state file itself. We
@@ -61,8 +74,9 @@ from pathlib import Path
 
 DEFAULT_PATH = Path.home() / ".local/state/linkedin-cli/state.json"
 
-# Under the credential broker the ledger lives in a broker-owned tree and HOME is not the
-# tenant's to write to, so the location has to be relocatable per invocation.
+# Under the credential broker the ledger lives in a broker-owned tree and HOME is
+# not the tenant's to write to, so the location has to be relocatable per
+# invocation.
 STATE_FILE_ENV = "LINKEDIN_STATE_FILE"
 
 DAY = 86400
@@ -222,11 +236,37 @@ def resolve_path(path: Path | None = None) -> Path:
 
     Read at construction rather than at import, so a broker that sets the
     variable per invocation is honoured and so the tests can relocate it.
+
+    Under a confined deployment (`LINKEDIN_DEPLOYMENT`, see `supervisor.confined`)
+    the default is refused rather than used, on the same terms as the browser
+    binary and profile. `DEFAULT_PATH` is under `$HOME`, and that HOME is an image
+    layer there - destroyed by every container rebuild. So a policy that lost this
+    key does not fail; it relocates the ledger onto a surface the next redeploy
+    wipes, where the "absent is not corrupt" rule above then reads an honest zero:
+    the 40/day message cap, any live throttle cooldown and an *open* circuit
+    breaker, all reset in one step with nothing to notice. The supervisor socket
+    goes with it, since that is derived from this file's parent.
     """
     if path is not None:
         return Path(path)
     override = os.environ.get(STATE_FILE_ENV, "").strip()
-    return Path(override).expanduser() if override else DEFAULT_PATH
+    if override:
+        return Path(override).expanduser()
+    # Imported here rather than at module scope: `supervisor` imports this
+    # module, so the two can only meet at call time. Which deployment this is is
+    # its question - one answer, three resolvers - and nothing on this path runs
+    # while that module is still being imported.
+    from . import supervisor
+
+    if supervisor.confined():
+        raise supervisor.no_fallback(
+            "ledger",
+            STATE_FILE_ENV,
+            f"{DEFAULT_PATH} is under a HOME that this deployment rebuilds on every redeploy, "
+            "so falling back to it silently hands every later invocation a ledger with no "
+            "history - the caps, the cooldown and the breaker all back to zero.",
+        )
+    return DEFAULT_PATH
 
 
 class State:
